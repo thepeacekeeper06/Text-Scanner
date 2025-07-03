@@ -1,0 +1,1360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Scanner - OCR & Barcode Reader</title>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/quagga@0.12.1/dist/quagga.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 10px;
+            color: #333;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 20px;
+            max-width: 500px;
+            width: 100%;
+            margin: 0 auto;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .mode-selector {
+            display: flex;
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 4px;
+            margin-bottom: 20px;
+            gap: 4px;
+        }
+
+        .mode-btn {
+            flex: 1;
+            padding: 12px 8px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: transparent;
+            color: #666;
+        }
+
+        .mode-btn.active {
+            background: white;
+            color: #667eea;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .camera-section {
+            text-align: center;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        #video {
+            width: 100%;
+            max-height: 300px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            margin-bottom: 15px;
+            display: none;
+            object-fit: cover;
+        }
+
+        #canvas {
+            display: none;
+        }
+
+        .captured-image {
+            width: 100%;
+            max-height: 300px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            margin-bottom: 15px;
+            object-fit: cover;
+        }
+
+        .upload-area {
+            border: 2px dashed #ccc;
+            border-radius: 15px;
+            padding: 30px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 15px;
+        }
+
+        .upload-area.dragover {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .upload-area:hover {
+            border-color: #667eea;
+        }
+
+        .upload-icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            color: #ccc;
+        }
+
+        .upload-text {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            flex: 1;
+            min-width: 120px;
+            padding: 14px 20px;
+            border: none;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .status {
+            text-align: center;
+            margin: 15px 0;
+            font-size: 0.9rem;
+            padding: 12px;
+            border-radius: 10px;
+            font-weight: 500;
+        }
+
+        .status.loading {
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+        }
+
+        .status.error {
+            background: rgba(231, 76, 60, 0.1);
+            color: #e74c3c;
+        }
+
+        .status.success {
+            background: rgba(39, 174, 96, 0.1);
+            color: #27ae60;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: #e9ecef;
+            border-radius: 2px;
+            overflow: hidden;
+            margin: 15px 0;
+            display: none;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 2px;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+
+        .result-card {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 15px;
+            position: relative;
+        }
+
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .result-type {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .confidence-badge {
+            background: #667eea;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .result-text {
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            color: #333;
+            word-break: break-word;
+            white-space: pre-wrap;
+            min-height: 60px;
+            cursor: pointer;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+            transition: border-color 0.2s ease;
+        }
+
+        .result-text:hover {
+            border-color: #667eea;
+        }
+
+        .result-text:empty:before {
+            content: "Tap here when text appears to copy...";
+            color: #999;
+            font-style: italic;
+        }
+
+        .copy-hint {
+            text-align: center;
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 8px;
+        }
+
+        .advanced-toggle {
+            text-align: center;
+            margin: 15px 0;
+        }
+
+        .toggle-btn {
+            background: none;
+            border: none;
+            color: #667eea;
+            font-size: 0.85rem;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+
+        .advanced-settings {
+            background: rgba(240, 240, 240, 0.5);
+            border-radius: 12px;
+            padding: 15px;
+            margin: 15px 0;
+            display: none;
+        }
+
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .setting-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .setting-label {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .setting-control select {
+            padding: 6px 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            background: white;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #27ae60;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            transform: translateX(120%);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+            font-size: 0.9rem;
+            font-weight: 500;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .barcode-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            border-radius: 15px;
+        }
+
+        .barcode-frame {
+            width: 80%;
+            height: 60%;
+            border: 2px solid #00ff00;
+            border-radius: 8px;
+            position: relative;
+        }
+
+        .barcode-frame::before,
+        .barcode-frame::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #00ff00;
+        }
+
+        .barcode-frame::before {
+            top: -3px;
+            left: -3px;
+            border-right: none;
+            border-bottom: none;
+        }
+
+        .barcode-frame::after {
+            bottom: -3px;
+            right: -3px;
+            border-left: none;
+            border-top: none;
+        }
+
+        /* Mobile optimizations */
+        @media (max-width: 480px) {
+            .container {
+                padding: 15px;
+                margin: 5px;
+                border-radius: 15px;
+            }
+
+            .header h1 {
+                font-size: 1.5rem;
+            }
+
+            .controls {
+                flex-direction: column;
+            }
+
+            .btn {
+                min-width: 100%;
+            }
+
+            .mode-btn {
+                font-size: 0.8rem;
+                padding: 10px 6px;
+            }
+
+            .result-text {
+                font-size: 0.85rem;
+                padding: 12px;
+            }
+        }
+
+        @media (max-height: 700px) {
+            #video {
+                max-height: 200px;
+            }
+
+            .captured-image {
+                max-height: 200px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📱 Smart Scanner</h1>
+            <p>✅ Ready! OCR → Google Sheets Integration</p>
+        </div>
+
+        <div class="mode-selector">
+            <button class="mode-btn active" data-mode="text">📄 Text OCR</button>
+            <button class="mode-btn" data-mode="qr">🔲 QR Code</button>
+            <button class="mode-btn" data-mode="barcode">📊 Barcode</button>
+        </div>
+
+        <div class="camera-section">
+            <video id="video" autoplay playsinline muted></video>
+            <canvas id="canvas"></canvas>
+            <div id="capturedImageContainer"></div>
+            
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-icon">📁</div>
+                <div class="upload-text">
+                    Tap to upload image<br>
+                    <small>or drag & drop here</small>
+                </div>
+            </div>
+            
+            <input type="file" id="fileInput" class="file-input" accept="image/*">
+            
+            <div class="barcode-overlay" id="barcodeOverlay">
+                <div class="barcode-frame"></div>
+            </div>
+        </div>
+
+        <div class="controls" id="controls">
+            <button class="btn btn-primary" id="startCamera">
+                📷 Start Camera
+            </button>
+            <button class="btn btn-secondary" id="captureBtn" disabled>
+                📸 Capture
+            </button>
+            <button class="btn btn-secondary" id="processBtn" style="display: none;">
+                🔍 Scan
+            </button>
+            <button class="btn btn-secondary" id="retakeBtn" style="display: none;">
+                🔄 Retake
+            </button>
+        </div>
+
+        <div class="progress-bar" id="progressBar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+
+        <div class="status" id="status">Choose camera or upload an image to start scanning</div>
+
+        <div class="advanced-toggle">
+            <button class="toggle-btn" id="advancedToggle">⚙️ Advanced Settings</button>
+            <div style="font-size: 0.75rem; color: #666; margin-top: 5px;">
+                Uses multi-PSM + image enhancement for better accuracy
+            </div>
+        </div>
+
+        <div class="advanced-settings" id="advancedSettings">
+            <div class="setting-row">
+                <span class="setting-label">Language</span>
+                <div class="setting-control">
+                    <select id="languageSelect">
+                        <option value="eng">English</option>
+                        <option value="eng+fra">English + French</option>
+                        <option value="eng+spa">English + Spanish</option>
+                        <option value="chi_sim">Chinese</option>
+                        <option value="ara">Arabic</option>
+                    </select>
+                </div>
+            </div>
+            <div class="setting-row">
+                <span class="setting-label">Text Mode</span>
+                <div class="setting-control">
+                    <select id="psmSelect">
+                        <option value="3">Auto Detect</option>
+                        <option value="6">Single Block</option>
+                        <option value="7">Single Line</option>
+                        <option value="8">Single Word</option>
+                        <option value="11">Sparse Text</option>
+                        <option value="13">Raw Line</option>
+                    </select>
+                </div>
+            </div>
+            <div class="setting-row">
+                <span class="setting-label">Processing</span>
+                <div class="setting-control">
+                    <small style="color: #666;">Multi-PSM + Image Enhancement</small>
+                </div>
+            </div>
+            <div class="setting-row">
+                <span class="setting-label">Google Sheets URL</span>
+                <div class="setting-control">
+                    <input type="url" id="googleSheetsUrl" placeholder="✅ Your Google Sheets is already configured" 
+                           style="width: 100%; padding: 6px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 0.8rem;">
+                    <div style="font-size: 0.7rem; color: #666; margin-top: 2px;">
+                        📖 <a href="#" onclick="showGoogleSheetsHelp()" style="color: #667eea; text-decoration: none;">Setup Instructions</a>
+                    </div>
+                </div>
+            </div>
+            <div class="setting-row">
+                <span class="setting-label">Auto-Send RM Numbers</span>
+                <div class="setting-control">
+                    <label style="display: flex; align-items: center; gap: 5px; font-size: 0.8rem;">
+                        <input type="checkbox" id="autoSendCheckbox" checked style="margin: 0;">
+                        <span>Auto-send to Sheets</span>
+                    </label>
+                </div>
+            </div>
+            <div class="setting-row">
+                <span class="setting-label">Test Connection</span>
+                <div class="setting-control">
+                    <button onclick="testGoogleSheetsConnection()" 
+                            style="background: #27ae60; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; cursor: pointer;">
+                        🧪 Test Google Sheets
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="result-card" id="resultCard" style="display: none;">
+            <div class="result-header">
+                <span class="result-type" id="resultType">OCR Result</span>
+                <span class="confidence-badge" id="confidenceBadge">0% confident</span>
+            </div>
+            <div class="result-text" id="resultText"></div>
+            <div class="copy-hint">Tap result to copy to clipboard</div>
+        </div>
+    </div>
+
+    <div class="notification" id="notification">📋 Copied to clipboard!</div>
+
+    <div class="help-modal" id="helpModal">
+        <div class="help-content">
+            <div class="help-header">
+                <h3>📊 Google Sheets Setup</h3>
+                <button class="help-close" onclick="hideGoogleSheetsHelp()">×</button>
+            </div>
+            
+            <div class="help-step">
+                <span class="help-step-number">1</span>
+                <strong>Create Google Sheet:</strong> Open Google Sheets and create a new spreadsheet for your RM numbers.
+            </div>
+            
+            <div class="help-step">
+                <span class="help-step-number">2</span>
+                <strong>Open Apps Script:</strong> In your sheet, go to Extensions → Apps Script.
+            </div>
+            
+            <div class="help-step">
+                <span class="help-step-number">3</span>
+                <strong>Copy Script Code:</strong> Replace the default code with the provided Google Apps Script code.
+            </div>
+            
+            <div class="help-step">
+                <span class="help-step-number">4</span>
+                <strong>Deploy Web App:</strong> Click Deploy → New deployment → Choose "Web app".
+            </div>
+            
+            <div class="help-step">
+                <span class="help-step-number">5</span>
+                <strong>Set Permissions:</strong> Execute as "Me", Who has access "Anyone".
+            </div>
+            
+            <div class="help-step">
+                <span class="help-step-number">6</span>
+                <strong>Copy URL:</strong> After deployment, copy the Web app URL and paste it above.
+            </div>
+            
+            <div style="background: #e8f5e8; padding: 15px; border-radius: 8px; margin-top: 15px;">
+                <strong>✅ Once configured:</strong> RM numbers will be automatically logged with date and time stamps when "Valid RM OK FOR USE" text is detected!
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Google Sheets integration
+        function getGoogleSheetsUrl() {
+            const urlInput = document.getElementById('googleSheetsUrl');
+            return urlInput.value || 'https://script.google.com/macros/s/AKfycbwEexH0Dhx5RNenAoLLZmKHFz3Knze8JBk7AUj_TTz88dSYFvvKnMHCNeLLqv5w7FvpcA/exec';
+        }
+        
+        function isAutoSendEnabled() {
+            const checkbox = document.getElementById('autoSendCheckbox');
+            return checkbox.checked;
+        }
+        
+        // Extract RM number from text
+        function extractRMNumber(text) {
+            // Pattern to match "Valid RM OK FOR USE - XX-X" and extract the number
+            const patterns = [
+                /Valid\s+RM\s+OK\s+FOR\s+USE\s*-\s*(\d+-\d+)/i,
+                /Valid\s+RM\s+0K\s+FOR\s+USE\s*-\s*(\d+-\d+)/i, // Handle OCR mistaking O for 0
+                /Valid\s+RM\s+[O0]K\s+FOR\s+USE\s*-\s*(\d+-\d+)/i, // Handle both O and 0
+                /RM\s+[O0]K\s+FOR\s+USE\s*-\s*(\d+-\d+)/i, // Partial match
+                /FOR\s+USE\s*-\s*(\d+-\d+)/i // Even more partial
+            ];
+            
+            for (const pattern of patterns) {
+                const match = text.match(pattern);
+                if (match && match[1]) {
+                    console.log(`RM Number extracted: ${match[1]} from text: "${text}"`);
+                    return match[1];
+                }
+            }
+            
+            console.log(`No RM number found in text: "${text}"`);
+            return null;
+        }
+        
+        // Send data to Google Sheets
+        async function sendToGoogleSheets(rmNumber, fullText) {
+            try {
+                const googleSheetsUrl = getGoogleSheetsUrl();
+                
+                showStatus('Sending to Google Sheets...', 'loading');
+                
+                const data = {
+                    rmNumber: rmNumber,
+                    fullText: fullText,
+                    timestamp: new Date().toISOString()
+                };
+                
+                console.log('Sending to Google Sheets:', data);
+                
+                const response = await fetch(googleSheetsUrl, {
+                    method: 'POST',
+                    mode: 'no-cors', // Required for Google Apps Script
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                console.log('Data sent successfully to Google Sheets');
+                showNotification(`📊 RM ${rmNumber} sent to Google Sheets!`);
+                showStatus(`Success! RM ${rmNumber} logged to Google Sheets.`, 'success');
+                
+            } catch (error) {
+                console.error('Failed to send to Google Sheets:', error);
+                showNotification('❌ Failed to send to Google Sheets');
+                showStatus('Failed to send to Google Sheets. Check console for details.', 'error');
+            }
+        }
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const startCameraBtn = document.getElementById('startCamera');
+        const captureBtn = document.getElementById('captureBtn');
+        const processBtn = document.getElementById('processBtn');
+        const retakeBtn = document.getElementById('retakeBtn');
+        const status = document.getElementById('status');
+        const resultCard = document.getElementById('resultCard');
+        const resultText = document.getElementById('resultText');
+        const resultType = document.getElementById('resultType');
+        const confidenceBadge = document.getElementById('confidenceBadge');
+        const capturedImageContainer = document.getElementById('capturedImageContainer');
+        const progressBar = document.getElementById('progressBar');
+        const progressFill = document.getElementById('progressFill');
+        const notification = document.getElementById('notification');
+        const fileInput = document.getElementById('fileInput');
+        const uploadArea = document.getElementById('uploadArea');
+        const advancedToggle = document.getElementById('advancedToggle');
+        const advancedSettings = document.getElementById('advancedSettings');
+        const barcodeOverlay = document.getElementById('barcodeOverlay');
+
+        let stream = null;
+        let capturedImageData = null;
+        let currentMode = 'text';
+        let isScanning = false;
+
+        // Mode switching
+        document.querySelectorAll('.mode-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentMode = btn.dataset.mode;
+                updateUI();
+            });
+        });
+
+        function updateUI() {
+            const isTextMode = currentMode === 'text';
+            advancedToggle.style.display = isTextMode ? 'block' : 'none';
+            
+            // Update process button text based on mode
+            if (currentMode === 'text') {
+                processBtn.innerHTML = '🔍 Advanced Scan';
+                resultType.textContent = 'OCR Result';
+                status.textContent = 'Choose camera or upload an image for advanced text recognition';
+            } else if (currentMode === 'qr') {
+                processBtn.innerHTML = '🔍 Scan QR';
+                resultType.textContent = 'QR Code';
+                status.textContent = 'Choose camera or upload an image for QR code scanning';
+            } else {
+                processBtn.innerHTML = '🔍 Scan Barcode';
+                resultType.textContent = 'Barcode';
+                status.textContent = 'Choose camera or upload an image for barcode scanning';
+            }
+        }
+
+        // Advanced settings toggle
+        advancedToggle.addEventListener('click', () => {
+            const isHidden = advancedSettings.style.display === 'none';
+            advancedSettings.style.display = isHidden ? 'block' : 'none';
+            advancedToggle.textContent = isHidden ? '🔼 Hide Settings' : '⚙️ Advanced Settings';
+        });
+
+        // File upload handling
+        uploadArea.addEventListener('click', () => fileInput.click());
+
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFileUpload(files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFileUpload(e.target.files[0]);
+            }
+        });
+
+        function handleFileUpload(file) {
+            if (!file.type.startsWith('image/')) {
+                showStatus('Please select an image file', 'error');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                capturedImageData = e.target.result;
+                displayCapturedImage(capturedImageData);
+                showProcessControls();
+                if (currentMode === 'text') {
+                    showStatus('Image uploaded! Click Advanced Scan for multi-technique OCR processing.', 'success');
+                } else {
+                    showStatus('Image uploaded successfully! Click Scan to process.', 'success');
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Camera functionality
+        startCameraBtn.addEventListener('click', async () => {
+            try {
+                showStatus('Requesting camera access...', 'loading');
+                
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        facingMode: 'environment',
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    } 
+                });
+                
+                video.srcObject = stream;
+                video.style.display = 'block';
+                uploadArea.style.display = 'none';
+                
+                if (currentMode !== 'text') {
+                    startBarcodeScanning();
+                }
+                
+                startCameraBtn.style.display = 'none';
+                captureBtn.disabled = false;
+                captureBtn.style.display = 'block';
+                
+                showStatus('Camera ready! Position your document or code.', 'success');
+                
+            } catch (error) {
+                console.error('Camera error:', error);
+                showStatus('Camera access denied. Please check permissions.', 'error');
+            }
+        });
+
+        captureBtn.addEventListener('click', () => {
+            if (!stream) return;
+            
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            capturedImageData = canvas.toDataURL('image/jpeg', 0.95);
+            
+            displayCapturedImage(capturedImageData);
+            stopCamera();
+            showProcessControls();
+            showStatus('Image captured! Click Advanced Scan for multi-technique OCR processing.', 'success');
+        });
+
+        processBtn.addEventListener('click', async () => {
+            if (!capturedImageData) return;
+            
+            if (currentMode === 'text') {
+                await performOCR();
+            } else if (currentMode === 'qr') {
+                await scanQRCode();
+            } else {
+                await scanBarcode();
+            }
+        });
+
+        retakeBtn.addEventListener('click', () => {
+            reset();
+        });
+
+        function displayCapturedImage(imageData) {
+            const img = document.createElement('img');
+            img.src = imageData;
+            img.className = 'captured-image';
+            capturedImageContainer.innerHTML = '';
+            capturedImageContainer.appendChild(img);
+            video.style.display = 'none';
+            uploadArea.style.display = 'none';
+        }
+
+        function showProcessControls() {
+            captureBtn.style.display = 'none';
+            processBtn.style.display = 'block';
+            retakeBtn.style.display = 'block';
+        }
+
+        function stopCamera() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+            }
+            barcodeOverlay.style.display = 'none';
+            isScanning = false;
+        }
+
+        function reset() {
+            capturedImageContainer.innerHTML = '';
+            resultCard.style.display = 'none';
+            video.style.display = 'none';
+            uploadArea.style.display = 'block';
+            
+            startCameraBtn.style.display = 'block';
+            captureBtn.style.display = 'none';
+            processBtn.style.display = 'none';
+            retakeBtn.style.display = 'none';
+            captureBtn.disabled = true;
+            
+            capturedImageData = null;
+            updateUI();
+        }
+
+        // Advanced image preprocessing - EXACT Sharp mode from working version
+        function preprocessImage(imageData, options = {}) {
+            const { contrast = 1.0, brightness = 0, mode = 'subtle' } = options;
+            
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+            const img = new Image();
+            
+            return new Promise((resolve) => {
+                img.onload = () => {
+                    tempCanvas.width = img.width;
+                    tempCanvas.height = img.height;
+                    tempCtx.drawImage(img, 0, 0);
+                    
+                    if (mode === 'sharp') {
+                        // EXACT Sharp processing from working version
+                        tempCtx.filter = `contrast(${contrast}) brightness(${100 + brightness}%) saturate(0%) blur(0px)`;
+                        tempCtx.drawImage(tempCanvas, 0, 0);
+                        console.log('Sharp preprocessing applied with contrast:', contrast, 'brightness:', brightness);
+                    } else if (mode === 'blue-enhance') {
+                        // Special processing for blue text on gray background
+                        const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+                        const data = imageData.data;
+                        
+                        for (let i = 0; i < data.length; i += 4) {
+                            const r = data[i];
+                            const g = data[i + 1];
+                            const b = data[i + 2];
+                            
+                            // Detect blue-ish text (higher blue component)
+                            const isBlueish = b > r && b > g && b > 100;
+                            
+                            if (isBlueish) {
+                                // Make blue text much darker (closer to black)
+                                data[i] = Math.min(r * 0.3, 50);     // R
+                                data[i + 1] = Math.min(g * 0.3, 50); // G  
+                                data[i + 2] = Math.min(b * 0.5, 80); // B
+                            } else {
+                                // Make background whiter
+                                data[i] = Math.min(255, r * 1.4);     // R
+                                data[i + 1] = Math.min(255, g * 1.4); // G
+                                data[i + 2] = Math.min(255, b * 1.2); // B
+                            }
+                        }
+                        
+                        tempCtx.putImageData(imageData, 0, 0);
+                    } else {
+                        // Subtle enhancement
+                        tempCtx.filter = `contrast(${contrast}) brightness(${100 + brightness}%)`;
+                        tempCtx.drawImage(tempCanvas, 0, 0);
+                    }
+                    
+                    resolve(tempCanvas.toDataURL('image/png', 0.95));
+                };
+                img.src = imageData;
+            });
+        }
+
+        // Advanced OCR functionality - Fixed for Sharp PSM 6 combination
+        async function performOCR() {
+            if (!capturedImageData) return;
+            
+            try {
+                processBtn.disabled = true;
+                showProgress(true);
+                
+                const language = document.getElementById('languageSelect').value;
+                const psm = document.getElementById('psmSelect').value;
+                
+                showStatus('Extracting text... This may take a moment.', 'loading');
+                
+                // Generate multiple preprocessed versions - EXACT from working version
+                const variations = [
+                    { name: 'Original', data: capturedImageData },
+                    { name: 'Enhanced', data: await preprocessImage(capturedImageData, { contrast: 1.2, brightness: 5 }) },
+                    { name: 'Sharp', data: await preprocessImage(capturedImageData, { contrast: 1.3, brightness: 5, mode: 'sharp' }) },
+                    { name: 'High Contrast', data: await preprocessImage(capturedImageData, { contrast: 1.8, brightness: 15 }) }
+                ];
+
+                // Try multiple PSM modes for better accuracy - EXACT sequence from working version
+                const psmModes = [psm, '6', '3', '11', '13']; // Current + fallbacks
+                let bestResult = { text: '', confidence: 0 };
+                let totalAttempts = variations.length * psmModes.length;
+                let completedAttempts = 0;
+                let attempts = [];
+
+                // Try OCR on each variation with multiple PSM modes
+                for (const variation of variations) {
+                    for (const currentPsm of psmModes) {
+                        try {
+                            showStatus(`Processing ${variation.name} (PSM ${currentPsm})...`, 'loading');
+                            console.log(`Starting OCR: ${variation.name} with PSM ${currentPsm}`);
+                            
+                            // Initialize Tesseract with progress tracking - EXACT from working version
+                            const worker = await Tesseract.createWorker(language, 1, {
+                                logger: m => {
+                                    if (m.status === 'recognizing text') {
+                                        const progress = Math.round(m.progress * 100);
+                                        const baseProgress = (completedAttempts / totalAttempts) * 100;
+                                        const currentProgress = (m.progress / totalAttempts) * 100;
+                                        const totalProgress = Math.round(baseProgress + currentProgress);
+                                        updateProgress(totalProgress);
+                                        showStatus(`Processing ${variation.name} (PSM ${currentPsm})... ${progress}%`, 'loading');
+                                    }
+                                }
+                            });
+                            
+                            console.log('Worker created successfully');
+                            
+                            // Use proven OCR settings for better accuracy - EXACT from working version
+                            await worker.setParameters({
+                                tessedit_pageseg_mode: currentPsm,
+                                tessedit_ocr_engine_mode: '1', // LSTM engine
+                                tessedit_char_whitelist: '', // No restrictions
+                                classify_enable_learning: '0',
+                                classify_enable_adaptive_matcher: '0',
+                                textord_really_old_xheight: '1',
+                                // Enable auto-rotation for better accuracy
+                                textord_equation_detect: '1',
+                                preserve_interword_spaces: '1'
+                            });
+                            
+                            console.log(`Parameters set for PSM ${currentPsm}`);
+                            
+                            // Perform OCR - EXACT from working version
+                            const { data } = await worker.recognize(variation.data);
+                            console.log(`OCR completed: confidence=${data.confidence}, text="${data.text.trim()}"`);
+                            
+                            // Cleanup
+                            await worker.terminate();
+                            
+                            const result = {
+                                variation: `${variation.name} (PSM ${currentPsm})`,
+                                text: data.text.trim(),
+                                confidence: data.confidence,
+                                timestamp: new Date().toLocaleTimeString()
+                            };
+                            
+                            attempts.push(result);
+                            console.log(`${result.variation}: ${result.confidence}% - "${result.text.substring(0, 50)}"`);
+                            
+                            // Track best result
+                            if (result.confidence > bestResult.confidence && result.text.length > 0) {
+                                bestResult = result;
+                            }
+                            
+                            completedAttempts++;
+                            
+                        } catch (error) {
+                            console.error(`Error with ${variation.name} PSM ${currentPsm}:`, error);
+                            attempts.push({
+                                variation: `${variation.name} (PSM ${currentPsm})`,
+                                text: '',
+                                confidence: 0,
+                                error: error.message,
+                                timestamp: new Date().toLocaleTimeString()
+                            });
+                            completedAttempts++;
+                        }
+                    }
+                }
+
+                // Display results - EXACT from working version
+                if (bestResult.text) {
+                    showResult(bestResult.text, bestResult.confidence, 'text');
+                    showStatus(`Text extraction complete! Best result from ${bestResult.variation} (${bestResult.confidence}% confidence)`, 'success');
+                    
+                    // Check for RM number and handle Google Sheets integration
+                    const rmNumber = extractRMNumber(bestResult.text);
+                    if (rmNumber) {
+                        console.log(`RM Number detected: ${rmNumber}`);
+                        
+                        // Add visual indicator and manual send button
+                        const resultHeader = document.querySelector('.result-header');
+                        const rmIndicator = document.createElement('div');
+                        rmIndicator.style.cssText = 'display: flex; align-items: center; gap: 10px; margin-top: 8px;';
+                        
+                        const badge = document.createElement('span');
+                        badge.style.cssText = 'background: #27ae60; color: white; padding: 4px 8px; border-radius: 12px; font-size: 0.75rem;';
+                        badge.textContent = `📊 RM ${rmNumber}`;
+                        
+                        const sendBtn = document.createElement('button');
+                        sendBtn.style.cssText = 'background: #667eea; color: white; border: none; padding: 4px 12px; border-radius: 12px; font-size: 0.75rem; cursor: pointer;';
+                        sendBtn.textContent = '📤 Send to Sheets';
+                        sendBtn.onclick = () => sendToGoogleSheets(rmNumber, bestResult.text);
+                        
+                        rmIndicator.appendChild(badge);
+                        rmIndicator.appendChild(sendBtn);
+                        resultHeader.appendChild(rmIndicator);
+                        
+                        // Auto-send if enabled
+                        if (isAutoSendEnabled()) {
+                            setTimeout(() => {
+                                sendToGoogleSheets(rmNumber, bestResult.text);
+                            }, 1000);
+                        }
+                    }
+                } else {
+                    showStatus('No text detected in any variation. Try adjusting lighting or camera angle.', 'error');
+                }
+                
+            } catch (error) {
+                console.error('OCR Error:', error);
+                showStatus('Advanced extraction failed. Please try again.', 'error');
+            } finally {
+                showProgress(false);
+                processBtn.disabled = false;
+            }
+        }
+
+        // QR Code scanning
+        async function scanQRCode() {
+            try {
+                showStatus('Scanning QR code...', 'loading');
+                
+                const img = new Image();
+                img.onload = () => {
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    ctx.drawImage(img, 0, 0);
+                    
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const code = jsQR(imageData.data, imageData.width, imageData.height);
+                    
+                    if (code) {
+                        showResult(code.data, 100, 'qr');
+                        showStatus('QR code scanned successfully!', 'success');
+                    } else {
+                        showStatus('No QR code found. Try better lighting or position.', 'error');
+                    }
+                };
+                img.src = capturedImageData;
+                
+            } catch (error) {
+                console.error('QR scan error:', error);
+                showStatus('QR code scanning failed. Please try again.', 'error');
+            }
+        }
+
+        // Barcode scanning
+        async function scanBarcode() {
+            try {
+                showStatus('Scanning barcode...', 'loading');
+                
+                // Create temporary canvas for Quagga
+                const tempCanvas = document.createElement('canvas');
+                const tempCtx = tempCanvas.getContext('2d');
+                const img = new Image();
+                
+                img.onload = () => {
+                    tempCanvas.width = img.width;
+                    tempCanvas.height = img.height;
+                    tempCtx.drawImage(img, 0, 0);
+                    
+                    Quagga.decodeSingle({
+                        src: capturedImageData,
+                        numOfWorkers: 0,
+                        inputStream: {
+                            size: 800
+                        },
+                        locator: {
+                            patchSize: "medium",
+                            halfSample: true
+                        },
+                        decoder: {
+                            readers: ["code_128_reader", "ean_reader", "ean_8_reader", "code_39_reader"]
+                        }
+                    }, (result) => {
+                        if (result && result.codeResult) {
+                            showResult(result.codeResult.code, 95, 'barcode');
+                            showStatus('Barcode scanned successfully!', 'success');
+                        } else {
+                            showStatus('No barcode found. Try better lighting or position.', 'error');
+                        }
+                    });
+                };
+                img.src = capturedImageData;
+                
+            } catch (error) {
+                console.error('Barcode scan error:', error);
+                showStatus('Barcode scanning failed. Please try again.', 'error');
+            }
+        }
+
+        // Real-time barcode scanning
+        function startBarcodeScanning() {
+            if (currentMode === 'text') return;
+            
+            barcodeOverlay.style.display = 'flex';
+            isScanning = true;
+            
+            const scanFrame = () => {
+                if (!isScanning || !video.videoWidth) {
+                    requestAnimationFrame(scanFrame);
+                    return;
+                }
+                
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                ctx.drawImage(video, 0, 0);
+                
+                if (currentMode === 'qr') {
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const code = jsQR(imageData.data, imageData.width, imageData.height);
+                    
+                    if (code) {
+                        capturedImageData = canvas.toDataURL('image/jpeg', 0.95);
+                        displayCapturedImage(capturedImageData);
+                        stopCamera();
+                        showResult(code.data, 100, 'qr');
+                        showStatus('QR code detected automatically!', 'success');
+                        showProcessControls();
+                        return;
+                    }
+                }
+                
+                requestAnimationFrame(scanFrame);
+            };
+            
+            scanFrame();
+        }
+
+        function showResult(text, confidence, type) {
+            resultText.textContent = text;
+            confidenceBadge.textContent = `${Math.round(confidence)}% confident`;
+            resultCard.style.display = 'block';
+            
+            // Auto-scroll to result
+            resultCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        function showStatus(message, type = '') {
+            status.textContent = message;
+            status.className = `status ${type}`;
+        }
+
+        function showProgress(show) {
+            progressBar.style.display = show ? 'block' : 'none';
+            if (!show) progressFill.style.width = '0%';
+        }
+
+        function updateProgress(percent) {
+            progressFill.style.width = percent + '%';
+        }
+
+        function showNotification(message) {
+            notification.textContent = message;
+            notification.classList.add('show');
+            setTimeout(() => notification.classList.remove('show'), 3000);
+        }
+
+        // Google Sheets help modal functions
+        function showGoogleSheetsHelp() {
+            document.getElementById('helpModal').style.display = 'flex';
+        }
+
+        function hideGoogleSheetsHelp() {
+            document.getElementById('helpModal').style.display = 'none';
+        }
+
+        // Test Google Sheets connection
+        async function testGoogleSheetsConnection() {
+            try {
+                showStatus('Testing Google Sheets connection...', 'loading');
+                
+                const testData = {
+                    rmNumber: 'TEST-1',
+                    fullText: 'Valid RM OK FOR USE - TEST-1 (Connection Test)',
+                    timestamp: new Date().toISOString()
+                };
+                
+                const googleSheetsUrl = getGoogleSheetsUrl();
+                console.log('Testing connection to:', googleSheetsUrl);
+                
+                await fetch(googleSheetsUrl, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(testData)
+                });
+                
+                showNotification('✅ Test sent to Google Sheets!');
+                showStatus('Test successful! Check your Google Sheet for TEST-1 entry.', 'success');
+                console.log('Test data sent successfully');
+                
+            } catch (error) {
+                console.error('Test failed:', error);
+                showNotification('❌ Test failed');
+                showStatus('Test failed. Check console for details.', 'error');
+            }
+        }
+
+        // Copy functionality
+        resultText.addEventListener('click', async () => {
+            const text = resultText.textContent;
+            if (text && !text.includes('Tap here')) {
+                try {
+                    await navigator.clipboard.writeText(text);
+                    showNotification('📋 Copied to clipboard!');
+                } catch (error) {
+                    // Fallback selection
+                    const range = document.createRange();
+                    range.selectNode(resultText);
+                    window.getSelection().removeAllRanges();
+                    window.getSelection().addRange(range);
+                    showNotification('📋 Text selected!');
+                }
+            }
+        });
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            stopCamera();
+        });
+
+        // Initialize
+        updateUI();
+        
+        // Load saved settings or use default URL
+        const defaultUrl = 'https://script.google.com/macros/s/AKfycbwEexH0Dhx5RNenAoLLZmKHFz3Knze8JBk7AUj_TTz88dSYFvvKnMHCNeLLqv5w7FvpcA/exec';
+        const savedUrl = localStorage.getItem('googleSheetsUrl') || defaultUrl;
+        document.getElementById('googleSheetsUrl').value = savedUrl;
+        
+        const savedAutoSend = localStorage.getItem('autoSendCheckbox');
+        if (savedAutoSend !== null) {
+            document.getElementById('autoSendCheckbox').checked = savedAutoSend === 'true';
+        }
+        
+        // Save settings when changed
+        document.getElementById('googleSheetsUrl').addEventListener('input', (e) => {
+            localStorage.setItem('googleSheetsUrl', e.target.value);
+        });
+        
+        document.getElementById('autoSendCheckbox').addEventListener('change', (e) => {
+            localStorage.setItem('autoSendCheckbox', e.target.checked);
+        });
+    </script>
+</body>
+</html>
