@@ -996,7 +996,7 @@
                 ];
 
                 // Try multiple PSM modes for better accuracy - EXACT sequence from working version
-                const psmModes = [psm, '6', '3', '11', '13']; // Current + fallbacks
+                const psmModes = [psm, '6']; // Current + fallbacks
                 let bestResult = { text: '', confidence: 0 };
                 let totalAttempts = variations.length * psmModes.length;
                 let completedAttempts = 0;
