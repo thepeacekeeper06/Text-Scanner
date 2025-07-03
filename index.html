@@ -589,48 +589,6 @@
 
     <div class="notification" id="notification">📋 Copied to clipboard!</div>
 
-    <div class="help-modal" id="helpModal">
-        <div class="help-content">
-            <div class="help-header">
-                <h3>📊 Google Sheets Setup</h3>
-                <button class="help-close" onclick="hideGoogleSheetsHelp()">×</button>
-            </div>
-            
-            <div class="help-step">
-                <span class="help-step-number">1</span>
-                <strong>Create Google Sheet:</strong> Open Google Sheets and create a new spreadsheet for your RM numbers.
-            </div>
-            
-            <div class="help-step">
-                <span class="help-step-number">2</span>
-                <strong>Open Apps Script:</strong> In your sheet, go to Extensions → Apps Script.
-            </div>
-            
-            <div class="help-step">
-                <span class="help-step-number">3</span>
-                <strong>Copy Script Code:</strong> Replace the default code with the provided Google Apps Script code.
-            </div>
-            
-            <div class="help-step">
-                <span class="help-step-number">4</span>
-                <strong>Deploy Web App:</strong> Click Deploy → New deployment → Choose "Web app".
-            </div>
-            
-            <div class="help-step">
-                <span class="help-step-number">5</span>
-                <strong>Set Permissions:</strong> Execute as "Me", Who has access "Anyone".
-            </div>
-            
-            <div class="help-step">
-                <span class="help-step-number">6</span>
-                <strong>Copy URL:</strong> After deployment, copy the Web app URL and paste it above.
-            </div>
-            
-            <div style="background: #e8f5e8; padding: 15px; border-radius: 8px; margin-top: 15px;">
-                <strong>✅ Once configured:</strong> RM numbers will be automatically logged with date and time stamps when "Valid RM OK FOR USE" text is detected!
-            </div>
-        </div>
-    </div>
 
     <script>
         // Google Sheets integration
@@ -746,7 +704,7 @@
             if (currentMode === 'text') {
                 processBtn.innerHTML = '🔍 Advanced Scan';
                 resultType.textContent = 'OCR Result';
-                status.textContent = 'Choose camera or upload an image for advanced text recognition';
+                status.textContent = 'Choose camera or upload an image for text recognition';
             } else if (currentMode === 'qr') {
                 processBtn.innerHTML = '🔍 Scan QR';
                 resultType.textContent = 'QR Code';
@@ -996,7 +954,7 @@
                 ];
 
                 // Try multiple PSM modes for better accuracy - EXACT sequence from working version
-                const psmModes = [psm, '6']; // Current + fallbacks
+                const psmModes = [psm, '11']; // Current + fallbacks
                 let bestResult = { text: '', confidence: 0 };
                 let totalAttempts = variations.length * psmModes.length;
                 let completedAttempts = 0;
@@ -1100,7 +1058,7 @@
                         const sendBtn = document.createElement('button');
                         sendBtn.style.cssText = 'background: #667eea; color: white; border: none; padding: 4px 12px; border-radius: 12px; font-size: 0.75rem; cursor: pointer;';
                         sendBtn.textContent = '📤 Send to Sheets';
-                        sendBtn.onclick = () => sendToGoogleSheets(rmNumber, bestResult.text);
+                        sendBtn.onclick = () => sendToGoogleSheets(rmNumber, `Valid RM OK FOR USE - ${rmNumber}`);
                         
                         rmIndicator.appendChild(badge);
                         rmIndicator.appendChild(sendBtn);
@@ -1109,7 +1067,7 @@
                         // Auto-send if enabled
                         if (isAutoSendEnabled()) {
                             setTimeout(() => {
-                                sendToGoogleSheets(rmNumber, bestResult.text);
+                                sendToGoogleSheets(rmNumber, `Valid RM OK FOR USE - ${rmNumber}`);
                             }, 1000);
                         }
                     }
@@ -1283,7 +1241,7 @@
                 
                 const testData = {
                     rmNumber: 'TEST-1',
-                    fullText: 'Valid RM OK FOR USE - TEST-1 (Connection Test)',
+                    fullText: 'Valid RM OK FOR USE - TEST-1',
                     timestamp: new Date().toISOString()
                 };
                 
