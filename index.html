@@ -594,7 +594,7 @@
         // Google Sheets integration
         function getGoogleSheetsUrl() {
             const urlInput = document.getElementById('googleSheetsUrl');
-            return urlInput.value || 'https://script.google.com/macros/s/AKfycbwEexH0Dhx5RNenAoLLZmKHFz3Knze8JBk7AUj_TTz88dSYFvvKnMHCNeLLqv5w7FvpcA/exec';
+            return urlInput.value || 'https://script.google.com/macros/s/AKfycbyLOohLJUOMODwxOrhqDXUWLD9ThKJ86qE4969NqXhj6l7o1U1wY_0HrPW7LQMfYwZ4oQ/exec';
         }
         
         function isAutoSendEnabled() {
@@ -1295,7 +1295,7 @@
         updateUI();
         
         // Load saved settings or use default URL
-        const defaultUrl = 'https://script.google.com/macros/s/AKfycbwEexH0Dhx5RNenAoLLZmKHFz3Knze8JBk7AUj_TTz88dSYFvvKnMHCNeLLqv5w7FvpcA/exec';
+        const defaultUrl = 'https://script.google.com/macros/s/AKfycbyLOohLJUOMODwxOrhqDXUWLD9ThKJ86qE4969NqXhj6l7o1U1wY_0HrPW7LQMfYwZ4oQ/exec';
         const savedUrl = localStorage.getItem('googleSheetsUrl') || defaultUrl;
         document.getElementById('googleSheetsUrl').value = savedUrl;
         
