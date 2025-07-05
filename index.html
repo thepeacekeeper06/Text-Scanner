@@ -818,11 +818,48 @@
         const advancedToggle = document.getElementById('advancedToggle');
         const advancedSettings = document.getElementById('advancedSettings');
 
-        let stream = null;
+        // Generate simple hash for image duplicate detection
+        function generateImageHash(imageData) {
+            // Simple hash based on image data length and first/last characters
+            const dataStr = imageData.toString();
+            const hash = dataStr.length + dataStr.slice(0, 100) + dataStr.slice(-100);
+            return btoa(hash).slice(0, 16); // Base64 encoded, first 16 chars
+        }
+        
+        // Check if current image was already processed
+        function isCurrentImageProcessed() {
+            if (!capturedImageData || !processedImageHash) return false;
+            const currentHash = generateImageHash(capturedImageData);
+            return currentHash === processedImageHash;
+        }
+        
+        // Mark current image as processed
+        function markImageAsProcessed() {
+            if (capturedImageData) {
+                processedImageHash = generateImageHash(capturedImageData);
+                imageAlreadyProcessed = true;
+                processBtn.disabled = true;
+                processBtn.style.opacity = '0.5';
+                processBtn.innerHTML = '✅ Already Scanned';
+                console.log('Image marked as processed:', processedImageHash);
+            }
+        }
+        
+        // Reset processing state for new image
+        function resetProcessingState() {
+            imageAlreadyProcessed = false;
+            processedImageHash = null;
+            processBtn.disabled = false;
+            processBtn.style.opacity = '1';
+            processBtn.innerHTML = '🔍 Scan RM Number';
+            console.log('Processing state reset for new image');
+        }
         let capturedImageData = null;
         let currentFilename = null;
         let currentVerification = null;
         let isScanning = false;
+        let imageAlreadyProcessed = false; // Track if current image was already scanned
+        let processedImageHash = null; // Store hash of processed image
 
         // Advanced settings toggle
         advancedToggle.addEventListener('click', () => {
@@ -863,6 +900,9 @@
                 showStatus('Please select an image file', 'error');
                 return;
             }
+
+            // Reset processing state for new upload
+            resetProcessingState();
 
             currentFilename = file.name;
             currentVerification = verifyScreenshotTimestamp(currentFilename, file.lastModified);
@@ -930,6 +970,9 @@
         captureBtn.addEventListener('click', () => {
             if (!stream) return;
             
+            // Reset processing state for new capture
+            resetProcessingState();
+            
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
@@ -953,6 +996,14 @@
 
         processBtn.addEventListener('click', async () => {
             if (!capturedImageData) return;
+            
+            // Check if this image was already processed
+            if (imageAlreadyProcessed || isCurrentImageProcessed()) {
+                showNotification('⚠️ This image was already scanned! Upload a new screenshot.');
+                showStatus('Image already processed. Please upload a new screenshot to scan again.', 'warning');
+                return;
+            }
+            
             await performOCR();
         });
 
@@ -974,6 +1025,13 @@
             captureBtn.style.display = 'none';
             processBtn.style.display = 'block';
             retakeBtn.style.display = 'block';
+            
+            // Ensure scan button is enabled for new images
+            if (!imageAlreadyProcessed) {
+                processBtn.disabled = false;
+                processBtn.style.opacity = '1';
+                processBtn.innerHTML = '🔍 Scan RM Number';
+            }
         }
 
         function stopCamera() {
@@ -1000,6 +1058,10 @@
             capturedImageData = null;
             currentFilename = null;
             currentVerification = null;
+            
+            // Reset processing state for new image
+            resetProcessingState();
+            
             showStatus('Choose camera or upload a recent screenshot (within 2 minutes) to start scanning', '');
         }
 
@@ -1187,6 +1249,9 @@
                         showStatus(`Processing complete!`, 'success');
                         
                         console.log(`RM Number detected: ${rmNumber}`);
+                        
+                        // Mark this image as processed to prevent re-scanning
+                        markImageAsProcessed();
                         
                         // Add visual indicator and manual send button
                         const resultHeader = document.querySelector('.result-header');
