@@ -421,7 +421,7 @@
                 <div class="upload-icon">📁</div>
                 <div class="upload-text">
                     Tap to upload screenshot<br>
-                    <small>Must be taken within 5 minutes</small>
+                    <small>Must be taken within 2 minutes</small>
                 </div>
             </div>
             
@@ -704,8 +704,8 @@
             console.log('Time difference (minutes):', timeDiffMinutes);
             console.log('Verification method:', verificationMethod);
             
-            // Strict timing: 1 minute future, 5 minutes past
-            const isValid = timeDiffMinutes >= -1 && timeDiffMinutes <= 5;
+            // Strict timing: 1 minute future, 2 minutes past
+            const isValid = timeDiffMinutes >= -1 && timeDiffMinutes <= 2;
             
             console.log('Is valid:', isValid);
             console.log('=== END VERIFICATION ===');
@@ -1000,7 +1000,7 @@
             capturedImageData = null;
             currentFilename = null;
             currentVerification = null;
-            showStatus('Choose camera or upload a recent screenshot (within 5 minutes) to start scanning', '');
+            showStatus('Choose camera or upload a recent screenshot (within 2 minutes) to start scanning', '');
         }
 
         // Advanced image preprocessing - EXACT from original working code
@@ -1082,8 +1082,8 @@
                     { name: 'High Contrast', data: await preprocessImage(capturedImageData, { contrast: 1.8, brightness: 15 }) }
                 ];
 
-                // Try multiple PSM modes for better accuracy - EXACT sequence from working version
-                const psmModes = [psm, '11']; // Current + fallbacks
+                // Optimized PSM modes for RM detection - 3, 6, and 11 only
+                const psmModes = ['3', '6', '11']; // Auto detect, Single block, Sparse text
                 let bestResult = { text: '', confidence: 0 };
                 let totalAttempts = variations.length * psmModes.length;
                 let completedAttempts = 0;
@@ -1096,7 +1096,7 @@
                             showStatus(`Processing...`, 'loading');
                             console.log(`Starting OCR: ${variation.name} with PSM ${currentPsm}`);
                             
-                            // Initialize Tesseract with progress tracking - EXACT from working version
+                            // Initialize Tesseract with enhanced progress tracking
                             const worker = await Tesseract.createWorker(language, 1, {
                                 logger: m => {
                                     if (m.status === 'recognizing text') {
@@ -1112,26 +1112,33 @@
                             
                             console.log('Worker created successfully');
                             
-                            // Use proven OCR settings for better accuracy - EXACT from working version
+                            // Enhanced OCR settings for better RM number detection
                             await worker.setParameters({
                                 tessedit_pageseg_mode: currentPsm,
                                 tessedit_ocr_engine_mode: '1', // LSTM engine
-                                tessedit_char_whitelist: '', // No restrictions
+                                tessedit_char_whitelist: '', // No restrictions initially
                                 classify_enable_learning: '0',
                                 classify_enable_adaptive_matcher: '0',
                                 textord_really_old_xheight: '1',
-                                // Enable auto-rotation for better accuracy
                                 textord_equation_detect: '1',
-                                preserve_interword_spaces: '1'
+                                preserve_interword_spaces: '1',
+                                // Enhanced settings for better text detection
+                                tessedit_enable_doc_dict: '1',
+                                tessedit_enable_dict_correction: '1',
+                                load_system_dawg: '1',
+                                load_freq_dawg: '1',
+                                load_unambig_dawg: '1',
+                                load_punc_dawg: '1',
+                                load_number_dawg: '1'
                             });
                             
-                            console.log(`Parameters set for PSM ${currentPsm}`);
+                            console.log(`Enhanced parameters set for PSM ${currentPsm}`);
                             
-                            // Perform OCR - EXACT from working version
+                            // Perform OCR with enhanced settings
                             const { data } = await worker.recognize(variation.data);
                             console.log(`OCR completed: confidence=${data.confidence}, text="${data.text.trim()}"`);
                             
-                            // Cleanup
+                            // Cleanup worker
                             await worker.terminate();
                             
                             const result = {
@@ -1144,9 +1151,15 @@
                             attempts.push(result);
                             console.log(`${result.variation}: ${result.confidence}% - "${result.text.substring(0, 50)}"`);
                             
-                            // Track best result
-                            if (result.confidence > bestResult.confidence && result.text.length > 0) {
+                            // Enhanced scoring - prioritize RM number detection
+                            const containsRM = extractRMNumber(result.text) !== null;
+                            const adjustedScore = containsRM ? result.confidence + 20 : result.confidence; // Boost RM-containing results
+                            
+                            // Track best result with enhanced scoring
+                            if (adjustedScore > bestResult.confidence && result.text.length > 0) {
                                 bestResult = result;
+                                bestResult.adjustedScore = adjustedScore;
+                                console.log(`🎯 New best result: ${adjustedScore}% (${result.confidence}% + RM bonus)`);
                             }
                             
                             completedAttempts++;
@@ -1295,7 +1308,7 @@
         });
 
         // Initialize
-                    showStatus('Choose camera or upload a recent screenshot (within 5 minutes) to start scanning', '');
+                    showStatus('Choose camera or upload a recent screenshot (within 2 minutes) to start scanning', '');
         
         // Load saved settings or use original working URL
         const defaultUrl = 'https://script.google.com/macros/s/AKfycbyLOohLJUOMODwxOrhqDXUWLD9ThKJ86qE4969NqXhj6l7o1U1wY_0HrPW7LQMfYwZ4oQ/exec';
