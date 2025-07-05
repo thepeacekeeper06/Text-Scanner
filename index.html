@@ -594,32 +594,49 @@
         }
         
         function verifyScreenshotTimestamp(filename, fileLastModified) {
-            console.log('=== STRICT VERIFICATION ===');
+            console.log('=== ENHANCED DEBUG VERIFICATION ===');
             console.log('Input filename:', filename);
+            console.log('Current time:', new Date());
+            
+            // Test the basic checks first
+            console.log('Starts with Screenshot_:', filename.startsWith('Screenshot_'));
+            console.log('Regex test:', /^Screenshot_\d{8}_\d{6}_/.test(filename));
             
             // STRICT: Must start with exact format "Screenshot_YYYYMMDD_HHMMSS_" 
-            if (!filename.startsWith('Screenshot_') || !filename.match(/^Screenshot_\d{8}_\d{6}_/)) {
-                console.log('❌ Filename does not start with required format');
+            if (!filename.startsWith('Screenshot_')) {
+                console.log('❌ Failed: Does not start with Screenshot_');
                 return {
                     valid: false,
-                    reason: 'Invalid filename. Must start with: Screenshot_YYYYMMDD_HHMMSS_ (any ending allowed)',
+                    reason: 'Filename must start with "Screenshot_"',
                     screenshotTime: null,
                     timeDiff: null
                 };
             }
             
+            if (!filename.match(/^Screenshot_\d{8}_\d{6}_/)) {
+                console.log('❌ Failed: Does not match Screenshot_YYYYMMDD_HHMMSS_ pattern');
+                return {
+                    valid: false,
+                    reason: 'Invalid format. Must start with: Screenshot_YYYYMMDD_HHMMSS_',
+                    screenshotTime: null,
+                    timeDiff: null
+                };
+            }
+            
+            console.log('✅ Filename format checks passed');
+            
             // Parse timestamp from filename - NO fallbacks, NO bypasses
             const screenshotTime = parseScreenshotFilename(filename);
             const currentTime = new Date();
             
-            console.log('Screenshot time:', screenshotTime);
+            console.log('Parsed screenshot time:', screenshotTime);
             console.log('Current time:', currentTime);
             
             if (!screenshotTime) {
                 console.log('❌ Failed to parse screenshot timestamp');
                 return {
                     valid: false,
-                    reason: 'Invalid screenshot format. Must start with: Screenshot_YYYYMMDD_HHMMSS_ (any ending)',
+                    reason: 'Could not parse date/time from filename',
                     screenshotTime: null,
                     timeDiff: null
                 };
@@ -627,17 +644,24 @@
             
             const timeDiffMs = currentTime.getTime() - screenshotTime.getTime();
             const timeDiffMinutes = timeDiffMs / (1000 * 60);
+            const timeDiffHours = timeDiffMs / (1000 * 60 * 60);
             
             console.log('Time difference (ms):', timeDiffMs);
             console.log('Time difference (minutes):', timeDiffMinutes);
+            console.log('Time difference (hours):', timeDiffHours);
             
-            // STRICT: 1 minute future, 2 minutes past - NO exceptions
-            const isValid = timeDiffMinutes >= -1 && timeDiffMinutes <= 2;
+            // More lenient timing for debugging - 24 hour window
+            const isValid = timeDiffMinutes >= -60 && timeDiffMinutes <= 1440; // 1 hour future, 24 hours past
             
-            console.log('Is valid:', isValid);
-            console.log('=== END STRICT VERIFICATION ===');
+            console.log('Is time valid (24h window):', isValid);
             
-            if (!isValid) {
+            // Also check original strict timing
+            const isStrictValid = timeDiffMinutes >= -1 && timeDiffMinutes <= 2;
+            console.log('Is time valid (strict 2min):', isStrictValid);
+            
+            console.log('=== END ENHANCED DEBUG ===');
+            
+            if (!isStrictValid) {
                 return {
                     valid: false,
                     reason: timeDiffMinutes < -1 ? 
