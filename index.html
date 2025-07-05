@@ -421,7 +421,7 @@
                 <div class="upload-icon">📁</div>
                 <div class="upload-text">
                     Tap to upload screenshot<br>
-                    <small>Must start: Screenshot_YYYYMMDD_HHMMSS_</small>
+                    <small>📱 Mobile friendly | 🖥️ Desktop: Screenshot_YYYYMMDD_HHMMSS_</small>
                 </div>
             </div>
             
@@ -594,74 +594,78 @@
         }
         
         function verifyScreenshotTimestamp(filename, fileLastModified) {
-            console.log('=== ENHANCED DEBUG VERIFICATION ===');
+            console.log('=== SMART VERIFICATION (Mobile + Desktop) ===');
             console.log('Input filename:', filename);
+            console.log('File lastModified:', new Date(fileLastModified));
             console.log('Current time:', new Date());
             
-            // Test the basic checks first
-            console.log('Starts with Screenshot_:', filename.startsWith('Screenshot_'));
-            console.log('Regex test:', /^Screenshot_\d{8}_\d{6}_/.test(filename));
-            
-            // STRICT: Must start with exact format "Screenshot_YYYYMMDD_HHMMSS_" 
-            if (!filename.startsWith('Screenshot_')) {
-                console.log('❌ Failed: Does not start with Screenshot_');
-                return {
-                    valid: false,
-                    reason: 'Filename must start with "Screenshot_"',
-                    screenshotTime: null,
-                    timeDiff: null
-                };
-            }
-            
-            if (!filename.match(/^Screenshot_\d{8}_\d{6}_/)) {
-                console.log('❌ Failed: Does not match Screenshot_YYYYMMDD_HHMMSS_ pattern');
-                return {
-                    valid: false,
-                    reason: 'Invalid format. Must start with: Screenshot_YYYYMMDD_HHMMSS_',
-                    screenshotTime: null,
-                    timeDiff: null
-                };
-            }
-            
-            console.log('✅ Filename format checks passed');
-            
-            // Parse timestamp from filename - NO fallbacks, NO bypasses
-            const screenshotTime = parseScreenshotFilename(filename);
             const currentTime = new Date();
+            let screenshotTime = null;
+            let verificationMethod = '';
+            let isDesktopScreenshot = false;
             
-            console.log('Parsed screenshot time:', screenshotTime);
-            console.log('Current time:', currentTime);
+            // Step 1: Check if this is a proper desktop screenshot filename
+            const isProperScreenshotName = filename.startsWith('Screenshot_') && 
+                                         /^Screenshot_\d{8}_\d{6}_/.test(filename);
             
-            if (!screenshotTime) {
-                console.log('❌ Failed to parse screenshot timestamp');
-                return {
-                    valid: false,
-                    reason: 'Could not parse date/time from filename',
-                    screenshotTime: null,
-                    timeDiff: null
-                };
+            console.log('Is proper screenshot filename:', isProperScreenshotName);
+            
+            if (isProperScreenshotName) {
+                // Desktop screenshot - use strict filename parsing
+                console.log('🖥️ Desktop screenshot detected - using filename verification');
+                screenshotTime = parseScreenshotFilename(filename);
+                verificationMethod = 'filename (desktop)';
+                isDesktopScreenshot = true;
+                
+                if (!screenshotTime) {
+                    console.log('❌ Failed to parse desktop screenshot timestamp');
+                    return {
+                        valid: false,
+                        reason: 'Invalid desktop screenshot format. Must be: Screenshot_YYYYMMDD_HHMMSS_',
+                        screenshotTime: null,
+                        timeDiff: null
+                    };
+                }
+            } else {
+                // Check if this could be a mobile upload
+                const isMobileUpload = /^\d+\.(jpg|jpeg|png)$/i.test(filename) || 
+                                      filename.length < 20 || 
+                                      (!filename.toLowerCase().includes('screenshot') && filename.length < 50);
+                
+                console.log('Is potential mobile upload:', isMobileUpload);
+                
+                if (isMobileUpload) {
+                    // Mobile upload - use file metadata
+                    console.log('📱 Mobile upload detected - using file metadata verification');
+                    screenshotTime = new Date(fileLastModified);
+                    verificationMethod = 'file metadata (mobile)';
+                    isDesktopScreenshot = false;
+                } else {
+                    // Neither proper screenshot nor mobile upload
+                    console.log('❌ Invalid file type - not screenshot or mobile upload');
+                    return {
+                        valid: false,
+                        reason: 'Invalid file. Upload either: Screenshot_YYYYMMDD_HHMMSS_ or use mobile browser',
+                        screenshotTime: null,
+                        timeDiff: null
+                    };
+                }
             }
             
             const timeDiffMs = currentTime.getTime() - screenshotTime.getTime();
             const timeDiffMinutes = timeDiffMs / (1000 * 60);
-            const timeDiffHours = timeDiffMs / (1000 * 60 * 60);
             
-            console.log('Time difference (ms):', timeDiffMs);
+            console.log('Screenshot time:', screenshotTime);
             console.log('Time difference (minutes):', timeDiffMinutes);
-            console.log('Time difference (hours):', timeDiffHours);
+            console.log('Verification method:', verificationMethod);
             
-            // More lenient timing for debugging - 24 hour window
-            const isValid = timeDiffMinutes >= -60 && timeDiffMinutes <= 1440; // 1 hour future, 24 hours past
+            // Strict timing for both desktop and mobile: 2 minutes
+            const isValid = timeDiffMinutes >= -1 && timeDiffMinutes <= 2;
             
-            console.log('Is time valid (24h window):', isValid);
+            console.log('Is time valid (2min window):', isValid);
+            console.log('=== END SMART VERIFICATION ===');
             
-            // Also check original strict timing
-            const isStrictValid = timeDiffMinutes >= -1 && timeDiffMinutes <= 2;
-            console.log('Is time valid (strict 2min):', isStrictValid);
-            
-            console.log('=== END ENHANCED DEBUG ===');
-            
-            if (!isStrictValid) {
+            if (!isValid) {
                 return {
                     valid: false,
                     reason: timeDiffMinutes < -1 ? 
@@ -674,10 +678,11 @@
             
             return {
                 valid: true,
-                reason: 'Screenshot timestamp verified successfully',
+                reason: `Screenshot verified via ${verificationMethod}`,
                 screenshotTime: screenshotTime,
                 timeDiff: Math.round(timeDiffMinutes * 10) / 10,
-                method: 'filename'
+                method: verificationMethod,
+                isDesktop: isDesktopScreenshot
             };
         }
         
@@ -889,10 +894,12 @@
                 displayCapturedImage(capturedImageData);
                 showProcessControls();
                 
-                if (currentVerification.method === 'file_metadata') {
-                    showStatus('📱 Mobile screenshot verified via file timestamp! Click Scan RM Number to process.', 'success');
+                if (currentVerification.method && currentVerification.method.includes('mobile')) {
+                    showStatus('📱 Mobile screenshot verified via timestamp! Click Scan RM Number to process.', 'success');
+                } else if (currentVerification.method && currentVerification.method.includes('desktop')) {
+                    showStatus('🖥️ Desktop screenshot verified via filename! Click Scan RM Number to process.', 'success');
                 } else {
-                    showStatus('✅ Screenshot verified via filename! Click Scan RM Number to process.', 'success');
+                    showStatus('✅ Screenshot verified! Click Scan RM Number to process.', 'success');
                 }
             };
             reader.readAsDataURL(file);
@@ -1022,7 +1029,7 @@
             // Reset processing state for new image
             resetProcessingState();
             
-            showStatus('Upload screenshot starting with Screenshot_YYYYMMDD_HHMMSS_ (within 2 minutes)', '');
+            showStatus('📱 Mobile gallery or 🖥️ Desktop screenshots (within 2 min)', '');
         }
 
         // Advanced image preprocessing - EXACT from original working code
@@ -1333,7 +1340,7 @@
         });
 
         // Initialize
-                    showStatus('Upload screenshot starting with Screenshot_YYYYMMDD_HHMMSS_ (within 2 minutes)', '');
+                    showStatus('📱 Mobile gallery or 🖥️ Desktop screenshots (within 2 min)', '');
         
         // Load saved settings or use original working URL
         const defaultUrl = 'https://script.google.com/macros/s/AKfycbyLOohLJUOMODwxOrhqDXUWLD9ThKJ86qE4969NqXhj6l7o1U1wY_0HrPW7LQMfYwZ4oQ/exec';
