@@ -420,8 +420,8 @@
             <div class="upload-area" id="uploadArea">
                 <div class="upload-icon">📁</div>
                 <div class="upload-text">
-                    🏭 FACTORY SECURITY<br>
-                    <small>Only "Screenshot" files allowed - NO EXCEPTIONS</small>
+                    📱💻 Upload Screenshot<br>
+                    <small>Mobile & Desktop supported (within 2-5 minutes)</small>
                 </div>
             </div>
             
@@ -626,65 +626,120 @@
             return null;
         }
         
-        function verifyScreenshotTimestamp(filename, fileLastModified) {
-            console.log('=== FACTORY-GRADE SECURITY VERIFICATION ===');
+        // EXIF metadata parser for mobile screenshot verification
+        function getImageCreationTime(imageData) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => {
+                    // Create canvas to read image data
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    ctx.drawImage(img, 0, 0);
+                    
+                    // Simple EXIF detection - look for EXIF markers in image data
+                    try {
+                        const dataURL = canvas.toDataURL();
+                        // This is a simplified approach - in practice would need full EXIF parser
+                        // For now, return null to fall back to file metadata
+                        resolve(null);
+                    } catch (error) {
+                        console.log('Could not read image metadata:', error);
+                        resolve(null);
+                    }
+                };
+                img.onerror = () => resolve(null);
+                img.src = imageData;
+            });
+        }
+        
+        async function verifyScreenshotTimestamp(filename, fileLastModified, imageData = null) {
+            console.log('=== SMART MOBILE-FRIENDLY VERIFICATION ===');
             console.log('Input filename:', filename);
             console.log('File lastModified:', new Date(fileLastModified));
             
-            // ZERO TOLERANCE: Only screenshots with proper names allowed
-            const isValidScreenshot = /screenshot/i.test(filename) || 
+            const currentTime = new Date();
+            
+            // Check if this is clearly a screenshot by filename
+            const isNamedScreenshot = /screenshot/i.test(filename) || 
                                      /screen_?shot/i.test(filename) ||
                                      /capture/i.test(filename);
             
-            console.log('Is valid screenshot filename:', isValidScreenshot);
+            // Check if this looks like a mobile browser temp file
+            const isMobileTempFile = /^\d{1,12}\.(jpg|jpeg|png)$/i.test(filename);
             
-            // REJECT ALL non-screenshot files - NO EXCEPTIONS
-            if (!isValidScreenshot) {
-                console.log('❌ FACTORY SECURITY: Non-screenshot file REJECTED');
-                return {
-                    valid: false,
-                    reason: '🏭 FACTORY SECURITY: Only files with "Screenshot" in the name are allowed. No exceptions for security.',
-                    screenshotTime: null,
-                    timeDiff: null
-                };
+            console.log('Is named screenshot:', isNamedScreenshot);
+            console.log('Is mobile temp file:', isMobileTempFile);
+            
+            // Handle named screenshots (desktop/some mobile apps)
+            if (isNamedScreenshot) {
+                const screenshotTime = parseScreenshotFilename(filename);
+                if (screenshotTime) {
+                    const timeDiffMs = currentTime.getTime() - screenshotTime.getTime();
+                    const timeDiffMinutes = timeDiffMs / (1000 * 60);
+                    
+                    console.log('Named screenshot age in minutes:', timeDiffMinutes);
+                    
+                    const isValid = timeDiffMinutes >= -0.5 && timeDiffMinutes <= 2;
+                    
+                    return {
+                        valid: isValid,
+                        reason: isValid ? '✅ Screenshot verified via filename timestamp' : 
+                               `Screenshot is ${Math.round(timeDiffMinutes * 10) / 10} minutes old. Please take a fresh screenshot.`,
+                        screenshotTime: screenshotTime,
+                        timeDiff: Math.round(timeDiffMinutes * 10) / 10,
+                        method: 'filename'
+                    };
+                } else {
+                    return {
+                        valid: false,
+                        reason: 'Screenshot filename detected but timestamp could not be parsed.',
+                        screenshotTime: null,
+                        timeDiff: null
+                    };
+                }
             }
             
-            // Parse timestamp from screenshot filename
-            const screenshotTime = parseScreenshotFilename(filename);
-            
-            if (!screenshotTime) {
-                console.log('❌ Screenshot filename but no valid timestamp');
-                return {
-                    valid: false,
-                    reason: 'Screenshot detected but timestamp could not be parsed. Ensure proper screenshot naming format.',
-                    screenshotTime: null,
-                    timeDiff: null
-                };
+            // Handle mobile temp files with enhanced validation
+            if (isMobileTempFile) {
+                console.log('📱 Mobile temp file detected - enhanced validation');
+                
+                // Use file metadata as creation time for mobile uploads
+                const fileCreationTime = new Date(fileLastModified);
+                const timeDiffMs = currentTime.getTime() - fileCreationTime.getTime();
+                const timeDiffMinutes = timeDiffMs / (1000 * 60);
+                
+                console.log('Mobile file age via metadata (minutes):', timeDiffMinutes);
+                
+                // For mobile uploads, allow 5-minute window but require very recent file modification
+                if (timeDiffMinutes <= 5 && timeDiffMinutes >= -0.5) {
+                    console.log('✅ Mobile upload passed timing validation');
+                    return {
+                        valid: true,
+                        reason: '📱 Mobile upload verified via file timestamp (recent)',
+                        screenshotTime: fileCreationTime,
+                        timeDiff: Math.round(timeDiffMinutes * 10) / 10,
+                        method: 'mobile_metadata'
+                    };
+                } else {
+                    console.log('❌ Mobile file too old or invalid');
+                    return {
+                        valid: false,
+                        reason: `📱 Mobile file is ${Math.round(timeDiffMinutes * 10) / 10} minutes old. Please take a fresh screenshot and upload immediately.`,
+                        screenshotTime: fileCreationTime,
+                        timeDiff: Math.round(timeDiffMinutes * 10) / 10
+                    };
+                }
             }
             
-            // Calculate age
-            const currentTime = new Date();
-            const timeDiffMs = currentTime.getTime() - screenshotTime.getTime();
-            const timeDiffMinutes = timeDiffMs / (1000 * 60);
-            
-            console.log('Screenshot timestamp:', screenshotTime);
-            console.log('Current time:', currentTime);
-            console.log('Age in minutes:', timeDiffMinutes);
-            
-            // FACTORY SECURITY: Ultra-strict 2-minute window
-            const isValid = timeDiffMinutes >= -0.5 && timeDiffMinutes <= 2;
-            
-            console.log('Factory security check passed:', isValid);
-            console.log('=== END FACTORY VERIFICATION ===');
-            
+            // Reject everything else
+            console.log('❌ File rejected - not a recognized screenshot format');
             return {
-                valid: isValid,
-                reason: isValid ? '🏭 Factory security: Screenshot verified and recent' : 
-                       timeDiffMinutes < -0.5 ? `Screenshot appears to be from the future (${Math.abs(Math.round(timeDiffMinutes * 10) / 10)} minutes ahead)` :
-                       `🏭 FACTORY SECURITY: Screenshot is too old (${Math.round(timeDiffMinutes * 10) / 10} minutes ago). Take a fresh screenshot.`,
-                screenshotTime: screenshotTime,
-                timeDiff: Math.round(timeDiffMinutes * 10) / 10,
-                method: 'factory_verified_filename'
+                valid: false,
+                reason: 'File must be a screenshot. Please take a screenshot (not a regular photo) and upload.',
+                screenshotTime: null,
+                timeDiff: null
             };
         }
         
@@ -1025,7 +1080,7 @@
             // Reset processing state for new image
             resetProcessingState();
             
-            showStatus('🏭 FACTORY SECURITY: Only "Screenshot" named files accepted. Take proper screenshots only.', '');
+            showStatus('📱 Mobile: Take screenshot & upload quickly. 💻 Desktop: Screenshots within 2 minutes.', '');
         }
 
         // Advanced image preprocessing - EXACT from original working code
@@ -1336,7 +1391,7 @@
         });
 
         // Initialize
-                    showStatus('🏭 FACTORY SECURITY: Only "Screenshot" named files accepted. Take proper screenshots only.', '');
+                    showStatus('📱 Mobile: Take screenshot & upload quickly. 💻 Desktop: Screenshots within 2 minutes.', '');
         
         // Load saved settings or use original working URL
         const defaultUrl = 'https://script.google.com/macros/s/AKfycbyLOohLJUOMODwxOrhqDXUWLD9ThKJ86qE4969NqXhj6l7o1U1wY_0HrPW7LQMfYwZ4oQ/exec';
