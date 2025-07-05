@@ -420,8 +420,8 @@
             <div class="upload-area" id="uploadArea">
                 <div class="upload-icon">📁</div>
                 <div class="upload-text">
-                    Tap to upload screenshot<br>
-                    <small>Must be taken within 2 minutes</small>
+                    Tap to upload SCREENSHOT<br>
+                    <small>Only screenshots allowed (within 2 minutes)</small>
                 </div>
             </div>
             
@@ -546,39 +546,42 @@
             return checkbox.checked;
         }
         
-        // Ultra-robust screenshot timestamp parsing for ALL phone types
+        // Strict screenshot timestamp parsing - only for actual screenshots
         function parseScreenshotFilename(filename) {
-            console.log('=== UNIVERSAL FILENAME PARSING ===');
+            console.log('=== STRICT SCREENSHOT PARSING ===');
             console.log('Original filename:', filename);
             
-            // Step 1: Extract any 8-digit date (YYYYMMDD) and 6-digit time (HHMMSS)
-            const dateTimePatterns = [
-                // Standard Android: Screenshot_20250705_135046_Photos.jpg
-                /(\d{8})[_-](\d{6})/,
+            // ONLY parse if filename clearly indicates it's a screenshot
+            if (!/screenshot|screen_?shot|capture/i.test(filename)) {
+                console.log('❌ Not a screenshot filename - skipping timestamp extraction');
+                return null;
+            }
+            
+            // Step 1: Extract screenshot-specific patterns only
+            const screenshotPatterns = [
+                // Screenshot_20250705_135046_Photos.jpg
+                /Screenshot[_-](\d{8})[_-](\d{6})/i,
                 
-                // iOS style: Screenshot_2025-07-05-13-50-46.jpg
-                /(\d{4})[_-](\d{2})[_-](\d{2})[_-](\d{2})[_-](\d{2})[_-](\d{2})/,
+                // Screenshot_2025-07-05-13-50-46.jpg  
+                /Screenshot[_-](\d{4})[_-](\d{2})[_-](\d{2})[_-](\d{2})[_-](\d{2})[_-](\d{2})/i,
                 
-                // Compact: Screenshot20250705135046.jpg
-                /(\d{8})(\d{6})/,
+                // Screen_Shot_2025-07-05_at_13.50.46.jpg
+                /Screen[_\s]?Shot[_-](\d{4})[_-](\d{2})[_-](\d{2})[_\s]*at[_\s]*(\d{1,2})\.(\d{2})\.(\d{2})/i,
                 
-                // Spaced: Screenshot 2025 07 05 13 50 46.jpg
-                /(\d{4})\s+(\d{2})\s+(\d{2})\s+(\d{2})\s+(\d{2})\s+(\d{2})/,
-                
-                // Mixed separators: Screenshot-2025_07_05-13_50_46.jpg
-                /(\d{4})[_-](\d{2})[_-](\d{2})[_-](\d{2})[_-](\d{2})[_-](\d{2})/
+                // Screenshot-20250705-135046.jpg
+                /Screenshot[_-](\d{8})[_-](\d{6})/i
             ];
             
             let year, month, day, hour, minute, second;
             
-            // Try each pattern
-            for (let i = 0; i < dateTimePatterns.length; i++) {
-                const match = filename.match(dateTimePatterns[i]);
-                console.log(`Pattern ${i + 1}:`, dateTimePatterns[i], '→', match);
+            // Try screenshot-specific patterns only
+            for (let i = 0; i < screenshotPatterns.length; i++) {
+                const match = filename.match(screenshotPatterns[i]);
+                console.log(`Screenshot pattern ${i + 1}:`, screenshotPatterns[i], '→', match);
                 
                 if (match) {
                     if (match.length === 3) {
-                        // Format: YYYYMMDD_HHMMSS
+                        // Format: Screenshot_YYYYMMDD_HHMMSS
                         const dateStr = match[1];
                         const timeStr = match[2];
                         
@@ -590,7 +593,7 @@
                         second = parseInt(timeStr.substring(4, 6));
                         
                     } else if (match.length === 7) {
-                        // Format: YYYY_MM_DD_HH_MM_SS
+                        // Format: Screenshot_YYYY_MM_DD_HH_MM_SS
                         year = parseInt(match[1]);
                         month = parseInt(match[2]) - 1;
                         day = parseInt(match[3]);
@@ -599,46 +602,8 @@
                         second = parseInt(match[6]);
                     }
                     
-                    console.log('Extracted:', {year, month: month+1, day, hour, minute, second});
+                    console.log('Extracted from screenshot:', {year, month: month+1, day, hour, minute, second});
                     break;
-                }
-            }
-            
-            // Fallback: Extract numbers and try to guess the format
-            if (!year) {
-                console.log('Fallback: Extracting all numbers...');
-                const numbers = filename.match(/\d+/g);
-                console.log('Found numbers:', numbers);
-                
-                if (numbers && numbers.length >= 1) {
-                    // Look for a long number that could be YYYYMMDDHHMMSS
-                    for (const num of numbers) {
-                        if (num.length === 14) {
-                            // YYYYMMDDHHMMSS format
-                            year = parseInt(num.substring(0, 4));
-                            month = parseInt(num.substring(4, 6)) - 1;
-                            day = parseInt(num.substring(6, 8));
-                            hour = parseInt(num.substring(8, 10));
-                            minute = parseInt(num.substring(10, 12));
-                            second = parseInt(num.substring(12, 14));
-                            console.log('14-digit fallback:', {year, month: month+1, day, hour, minute, second});
-                            break;
-                        } else if (num.length === 8 && num.startsWith('202')) {
-                            // Potential YYYYMMDD - look for next 6-digit number
-                            const dateNum = num;
-                            const nextNum = numbers.find(n => n.length === 6 && n !== dateNum);
-                            if (nextNum) {
-                                year = parseInt(dateNum.substring(0, 4));
-                                month = parseInt(dateNum.substring(4, 6)) - 1;
-                                day = parseInt(dateNum.substring(6, 8));
-                                hour = parseInt(nextNum.substring(0, 2));
-                                minute = parseInt(nextNum.substring(2, 4));
-                                second = parseInt(nextNum.substring(4, 6));
-                                console.log('8+6 digit fallback:', {year, month: month+1, day, hour, minute, second});
-                                break;
-                            }
-                        }
-                    }
                 }
             }
             
@@ -651,18 +616,18 @@
                 second >= 0 && second <= 59) {
                 
                 const parsedDate = new Date(year, month, day, hour, minute, second);
-                console.log('✅ Successfully parsed:', parsedDate);
-                console.log('=== END UNIVERSAL PARSING ===');
+                console.log('✅ Valid screenshot timestamp:', parsedDate);
+                console.log('=== END STRICT PARSING ===');
                 return parsedDate;
             }
             
-            console.log('❌ Failed to extract valid date/time');
-            console.log('=== END UNIVERSAL PARSING ===');
+            console.log('❌ Invalid or missing screenshot timestamp');
+            console.log('=== END STRICT PARSING ===');
             return null;
         }
         
         function verifyScreenshotTimestamp(filename, fileLastModified) {
-            console.log('=== SMART VERIFICATION WITH FILE METADATA ===');
+            console.log('=== STRICT SCREENSHOT VERIFICATION ===');
             console.log('Input filename:', filename);
             console.log('File lastModified:', new Date(fileLastModified));
             
@@ -670,32 +635,51 @@
             let screenshotTime = null;
             let verificationMethod = '';
             
-            // First try to parse from filename
-            screenshotTime = parseScreenshotFilename(filename);
+            // STRICT: Only allow files that clearly indicate they are screenshots
+            const isDefinitelyScreenshot = /screenshot/i.test(filename) || 
+                                         /screen_?shot/i.test(filename) ||
+                                         /capture/i.test(filename);
             
-            if (screenshotTime) {
-                verificationMethod = 'filename';
-                console.log('✅ Using filename timestamp:', screenshotTime);
-            } else {
-                // Fallback to file's lastModified date for mobile uploads
+            const isMobileBrowserTempFile = /^\d{1,12}\.(jpg|jpeg|png)$/i.test(filename);
+            
+            console.log('Is definitely screenshot:', isDefinitelyScreenshot);
+            console.log('Is mobile browser temp file:', isMobileBrowserTempFile);
+            
+            if (!isDefinitelyScreenshot && !isMobileBrowserTempFile) {
+                console.log('❌ File is not a screenshot - REJECTED');
+                return {
+                    valid: false,
+                    reason: 'Only screenshot files are allowed. Please upload a screenshot, not a regular photo.',
+                    screenshotTime: null,
+                    timeDiff: null
+                };
+            }
+            
+            // Try to parse timestamp from filename (only for definite screenshots)
+            if (isDefinitelyScreenshot) {
+                screenshotTime = parseScreenshotFilename(filename);
+                if (screenshotTime) {
+                    verificationMethod = 'filename';
+                    console.log('✅ Using screenshot filename timestamp:', screenshotTime);
+                }
+            }
+            
+            // Fallback to file metadata only for mobile browser temp files
+            if (!screenshotTime && isMobileBrowserTempFile) {
                 screenshotTime = new Date(fileLastModified);
                 verificationMethod = 'file_metadata';
-                console.log('📱 Using file metadata timestamp:', screenshotTime);
-                
-                // Check if this looks like a mobile browser temp file
-                const isMobileTempFile = /^\d+\.(jpg|jpeg|png)$/i.test(filename) || 
-                                       filename.length < 15 || 
-                                       !filename.toLowerCase().includes('screenshot');
-                
-                if (!isMobileTempFile) {
-                    console.log('❌ Not a mobile temp file and no parseable filename');
-                    return {
-                        valid: false,
-                        reason: 'Could not extract timestamp from filename. Please ensure screenshot has proper naming.',
-                        screenshotTime: null,
-                        timeDiff: null
-                    };
-                }
+                console.log('📱 Using mobile temp file metadata timestamp:', screenshotTime);
+            }
+            
+            // If still no timestamp, reject
+            if (!screenshotTime) {
+                console.log('❌ Could not extract valid screenshot timestamp');
+                return {
+                    valid: false,
+                    reason: 'Could not verify screenshot timestamp. Please ensure you upload a screenshot with proper naming.',
+                    screenshotTime: null,
+                    timeDiff: null
+                };
             }
             
             const timeDiffMs = currentTime.getTime() - screenshotTime.getTime();
@@ -708,11 +692,11 @@
             const isValid = timeDiffMinutes >= -1 && timeDiffMinutes <= 2;
             
             console.log('Is valid:', isValid);
-            console.log('=== END VERIFICATION ===');
+            console.log('=== END STRICT VERIFICATION ===');
             
             return {
                 valid: isValid,
-                reason: isValid ? `Screenshot is recent (verified via ${verificationMethod})` : 
+                reason: isValid ? `Screenshot verified (${verificationMethod})` : 
                        timeDiffMinutes < -1 ? `Screenshot appears to be from the future (${Math.abs(Math.round(timeDiffMinutes * 10) / 10)} minutes ahead)` :
                        `Screenshot is too old (${Math.round(timeDiffMinutes * 10) / 10} minutes ago). Please take a fresh screenshot.`,
                 screenshotTime: screenshotTime,
@@ -818,11 +802,48 @@
         const advancedToggle = document.getElementById('advancedToggle');
         const advancedSettings = document.getElementById('advancedSettings');
 
-        let stream = null;
+        // Generate simple hash for image duplicate detection
+        function generateImageHash(imageData) {
+            // Simple hash based on image data length and first/last characters
+            const dataStr = imageData.toString();
+            const hash = dataStr.length + dataStr.slice(0, 100) + dataStr.slice(-100);
+            return btoa(hash).slice(0, 16); // Base64 encoded, first 16 chars
+        }
+        
+        // Check if current image was already processed
+        function isCurrentImageProcessed() {
+            if (!capturedImageData || !processedImageHash) return false;
+            const currentHash = generateImageHash(capturedImageData);
+            return currentHash === processedImageHash;
+        }
+        
+        // Mark current image as processed
+        function markImageAsProcessed() {
+            if (capturedImageData) {
+                processedImageHash = generateImageHash(capturedImageData);
+                imageAlreadyProcessed = true;
+                processBtn.disabled = true;
+                processBtn.style.opacity = '0.5';
+                processBtn.innerHTML = '✅ Already Scanned';
+                console.log('Image marked as processed:', processedImageHash);
+            }
+        }
+        
+        // Reset processing state for new image
+        function resetProcessingState() {
+            imageAlreadyProcessed = false;
+            processedImageHash = null;
+            processBtn.disabled = false;
+            processBtn.style.opacity = '1';
+            processBtn.innerHTML = '🔍 Scan RM Number';
+            console.log('Processing state reset for new image');
+        }
         let capturedImageData = null;
         let currentFilename = null;
         let currentVerification = null;
         let isScanning = false;
+        let imageAlreadyProcessed = false; // Track if current image was already scanned
+        let processedImageHash = null; // Store hash of processed image
 
         // Advanced settings toggle
         advancedToggle.addEventListener('click', () => {
@@ -863,6 +884,9 @@
                 showStatus('Please select an image file', 'error');
                 return;
             }
+
+            // Reset processing state for new upload
+            resetProcessingState();
 
             currentFilename = file.name;
             currentVerification = verifyScreenshotTimestamp(currentFilename, file.lastModified);
@@ -930,6 +954,9 @@
         captureBtn.addEventListener('click', () => {
             if (!stream) return;
             
+            // Reset processing state for new capture
+            resetProcessingState();
+            
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
@@ -953,6 +980,14 @@
 
         processBtn.addEventListener('click', async () => {
             if (!capturedImageData) return;
+            
+            // Check if this image was already processed
+            if (imageAlreadyProcessed || isCurrentImageProcessed()) {
+                showNotification('⚠️ This image was already scanned! Upload a new screenshot.');
+                showStatus('Image already processed. Please upload a new screenshot to scan again.', 'warning');
+                return;
+            }
+            
             await performOCR();
         });
 
@@ -974,6 +1009,13 @@
             captureBtn.style.display = 'none';
             processBtn.style.display = 'block';
             retakeBtn.style.display = 'block';
+            
+            // Ensure scan button is enabled for new images
+            if (!imageAlreadyProcessed) {
+                processBtn.disabled = false;
+                processBtn.style.opacity = '1';
+                processBtn.innerHTML = '🔍 Scan RM Number';
+            }
         }
 
         function stopCamera() {
@@ -1000,7 +1042,11 @@
             capturedImageData = null;
             currentFilename = null;
             currentVerification = null;
-            showStatus('Choose camera or upload a recent screenshot (within 2 minutes) to start scanning', '');
+            
+            // Reset processing state for new image
+            resetProcessingState();
+            
+            showStatus('Choose camera or upload a SCREENSHOT (within 2 minutes) to start scanning', '');
         }
 
         // Advanced image preprocessing - EXACT from original working code
@@ -1188,6 +1234,9 @@
                         
                         console.log(`RM Number detected: ${rmNumber}`);
                         
+                        // Mark this image as processed to prevent re-scanning
+                        markImageAsProcessed();
+                        
                         // Add visual indicator and manual send button
                         const resultHeader = document.querySelector('.result-header');
                         const rmIndicator = document.createElement('div');
@@ -1308,7 +1357,7 @@
         });
 
         // Initialize
-                    showStatus('Choose camera or upload a recent screenshot (within 2 minutes) to start scanning', '');
+                    showStatus('Choose camera or upload a SCREENSHOT (within 2 minutes) to start scanning', '');
         
         // Load saved settings or use original working URL
         const defaultUrl = 'https://script.google.com/macros/s/AKfycbyLOohLJUOMODwxOrhqDXUWLD9ThKJ86qE4969NqXhj6l7o1U1wY_0HrPW7LQMfYwZ4oQ/exec';
