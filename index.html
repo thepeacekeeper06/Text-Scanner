@@ -3,10 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Scanner - OCR & Barcode Reader</title>
+    <title>Machine Validation - RM Number Detection</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/quagga@0.12.1/dist/quagga.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -52,34 +50,6 @@
         .header p {
             color: #666;
             font-size: 0.9rem;
-        }
-
-        .mode-selector {
-            display: flex;
-            background: #f8f9fa;
-            border-radius: 12px;
-            padding: 4px;
-            margin-bottom: 20px;
-            gap: 4px;
-        }
-
-        .mode-btn {
-            flex: 1;
-            padding: 12px 8px;
-            border: none;
-            border-radius: 8px;
-            font-size: 0.85rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            background: transparent;
-            color: #666;
-        }
-
-        .mode-btn.active {
-            background: white;
-            color: #667eea;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         }
 
         .camera-section {
@@ -219,6 +189,11 @@
         .status.success {
             background: rgba(39, 174, 96, 0.1);
             color: #27ae60;
+        }
+
+        .status.warning {
+            background: rgba(255, 193, 7, 0.1);
+            color: #ffc107;
         }
 
         .progress-bar {
@@ -369,48 +344,28 @@
             transform: translateX(0);
         }
 
-        .barcode-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
+        .verification-section {
+            background: rgba(255, 193, 7, 0.1);
+            border: 1px solid #ffc107;
+            border-radius: 12px;
+            padding: 15px;
+            margin: 15px 0;
             display: none;
+        }
+
+        .verification-header {
+            font-weight: 600;
+            color: #856404;
+            margin-bottom: 10px;
+            display: flex;
             align-items: center;
-            justify-content: center;
-            border-radius: 15px;
+            gap: 8px;
         }
 
-        .barcode-frame {
-            width: 80%;
-            height: 60%;
-            border: 2px solid #00ff00;
-            border-radius: 8px;
-            position: relative;
-        }
-
-        .barcode-frame::before,
-        .barcode-frame::after {
-            content: '';
-            position: absolute;
-            width: 20px;
-            height: 20px;
-            border: 3px solid #00ff00;
-        }
-
-        .barcode-frame::before {
-            top: -3px;
-            left: -3px;
-            border-right: none;
-            border-bottom: none;
-        }
-
-        .barcode-frame::after {
-            bottom: -3px;
-            right: -3px;
-            border-left: none;
-            border-top: none;
+        .verification-details {
+            font-size: 0.85rem;
+            color: #856404;
+            line-height: 1.4;
         }
 
         /* Mobile optimizations */
@@ -433,11 +388,6 @@
                 min-width: 100%;
             }
 
-            .mode-btn {
-                font-size: 0.8rem;
-                padding: 10px 6px;
-            }
-
             .result-text {
                 font-size: 0.85rem;
                 padding: 12px;
@@ -458,14 +408,8 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>📱 Smart Scanner</h1>
-            <p>✅ Ready! OCR → Google Sheets Integration</p>
-        </div>
-
-        <div class="mode-selector">
-            <button class="mode-btn active" data-mode="text">📄 Text OCR</button>
-            <button class="mode-btn" data-mode="qr">🔲 QR Code</button>
-            <button class="mode-btn" data-mode="barcode">📊 Barcode</button>
+            <h1>📱 Machine Validation</h1>
+            <p>✅ Ready! RM Number Detection & Logging</p>
         </div>
 
         <div class="camera-section">
@@ -476,15 +420,20 @@
             <div class="upload-area" id="uploadArea">
                 <div class="upload-icon">📁</div>
                 <div class="upload-text">
-                    Tap to upload image<br>
-                    <small>or drag & drop here</small>
+                    Tap to upload screenshot<br>
+                    <small>Must be taken within 2 minutes</small>
                 </div>
             </div>
             
             <input type="file" id="fileInput" class="file-input" accept="image/*">
-            
-            <div class="barcode-overlay" id="barcodeOverlay">
-                <div class="barcode-frame"></div>
+        </div>
+
+        <div class="verification-section" id="verificationSection">
+            <div class="verification-header">
+                🕐 Screenshot Timestamp Verification
+            </div>
+            <div class="verification-details" id="verificationDetails">
+                Checking screenshot timestamp...
             </div>
         </div>
 
@@ -496,7 +445,7 @@
                 📸 Capture
             </button>
             <button class="btn btn-secondary" id="processBtn" style="display: none;">
-                🔍 Scan
+                🔍 Scan RM Number
             </button>
             <button class="btn btn-secondary" id="retakeBtn" style="display: none;">
                 🔄 Retake
@@ -507,13 +456,10 @@
             <div class="progress-fill" id="progressFill"></div>
         </div>
 
-        <div class="status" id="status">Choose camera or upload an image to start scanning</div>
+        <div class="status" id="status">Choose camera or upload a recent screenshot to start scanning</div>
 
         <div class="advanced-toggle">
             <button class="toggle-btn" id="advancedToggle">⚙️ Advanced Settings</button>
-            <div style="font-size: 0.75rem; color: #666; margin-top: 5px;">
-                Uses multi-PSM + image enhancement for better accuracy
-            </div>
         </div>
 
         <div class="advanced-settings" id="advancedSettings">
@@ -579,11 +525,9 @@
 
         <div class="result-card" id="resultCard" style="display: none;">
             <div class="result-header">
-                <span class="result-type" id="resultType">OCR Result</span>
+                <span class="result-type" id="resultType">Result</span>
                 <span class="confidence-badge" id="confidenceBadge">0% confident</span>
             </div>
-            <div class="result-text" id="resultText"></div>
-            <div class="copy-hint">Tap result to copy to clipboard</div>
         </div>
     </div>
 
@@ -591,7 +535,7 @@
 
 
     <script>
-        // Google Sheets integration
+        // Google Sheets integration - Using original working URL
         function getGoogleSheetsUrl() {
             const urlInput = document.getElementById('googleSheetsUrl');
             return urlInput.value || 'https://script.google.com/macros/s/AKfycbyLOohLJUOMODwxOrhqDXUWLD9ThKJ86qE4969NqXhj6l7o1U1wY_0HrPW7LQMfYwZ4oQ/exec';
@@ -602,7 +546,63 @@
             return checkbox.checked;
         }
         
-        // Extract RM number from text
+        // Screenshot timestamp verification
+        function parseScreenshotFilename(filename) {
+            // Parse filename pattern: Screenshot_YYYYMMDD_HHMMSS_Photos.jpg
+            const match = filename.match(/Screenshot_(\d{8})_(\d{6})/);
+            if (!match) return null;
+            
+            const dateStr = match[1]; // YYYYMMDD
+            const timeStr = match[2]; // HHMMSS
+            
+            const year = parseInt(dateStr.substring(0, 4));
+            const month = parseInt(dateStr.substring(4, 6)) - 1; // JS months are 0-indexed
+            const day = parseInt(dateStr.substring(6, 8));
+            
+            const hour = parseInt(timeStr.substring(0, 2));
+            const minute = parseInt(timeStr.substring(2, 4));
+            const second = parseInt(timeStr.substring(4, 6));
+            
+            return new Date(year, month, day, hour, minute, second);
+        }
+        
+        function verifyScreenshotTimestamp(filename) {
+            const screenshotTime = parseScreenshotFilename(filename);
+            const currentTime = new Date();
+            
+            if (!screenshotTime) {
+                return {
+                    valid: false,
+                    reason: 'Invalid filename format. Expected: Screenshot_YYYYMMDD_HHMMSS_Photos.jpg',
+                    screenshotTime: null,
+                    timeDiff: null
+                };
+            }
+            
+            const timeDiffMs = currentTime.getTime() - screenshotTime.getTime();
+            const timeDiffMinutes = timeDiffMs / (1000 * 60);
+            
+            // Allow up to 2 minutes
+            const isValid = timeDiffMinutes >= 0 && timeDiffMinutes <= 2;
+            
+            return {
+                valid: isValid,
+                reason: isValid ? 'Screenshot is recent and valid' : 
+                       timeDiffMinutes < 0 ? 'Screenshot appears to be from the future' :
+                       `Screenshot is too old (${Math.round(timeDiffMinutes)} minutes ago)`,
+                screenshotTime: screenshotTime,
+                timeDiff: Math.round(timeDiffMinutes * 100) / 100 // Round to 2 decimal places
+            };
+        }
+        
+        function showVerificationResult(verification, filename) {
+            const verificationSection = document.getElementById('verificationSection');
+            
+            // Hide verification details - keep logic but don't show to user
+            verificationSection.style.display = 'none';
+        }
+        
+        // Extract RM number from text - EXACT from original working code
         function extractRMNumber(text) {
             // Pattern to match "Valid RM OK FOR USE - XX-X" and extract the number
             const patterns = [
@@ -625,20 +625,26 @@
             return null;
         }
         
-        // Send data to Google Sheets
+        // Send data to Google Sheets with enhanced debugging
         async function sendToGoogleSheets(rmNumber, fullText) {
             try {
                 const googleSheetsUrl = getGoogleSheetsUrl();
                 
                 showStatus('Sending to Google Sheets...', 'loading');
                 
+                // Ensure clean data format
                 const data = {
-                    rmNumber: rmNumber,
-                    fullText: fullText,
+                    rmNumber: String(rmNumber).trim(),
+                    fullText: String(fullText).trim(),
                     timestamp: new Date().toISOString()
                 };
                 
-                console.log('Sending to Google Sheets:', data);
+                console.log('=== GOOGLE SHEETS DEBUG ===');
+                console.log('URL:', googleSheetsUrl);
+                console.log('Data being sent:', JSON.stringify(data, null, 2));
+                console.log('rmNumber type:', typeof data.rmNumber);
+                console.log('fullText type:', typeof data.fullText);
+                console.log('timestamp type:', typeof data.timestamp);
                 
                 const response = await fetch(googleSheetsUrl, {
                     method: 'POST',
@@ -650,15 +656,22 @@
                 });
                 
                 console.log('Data sent successfully to Google Sheets');
+                console.log('Response status:', response.status);
+                console.log('=== END DEBUG ===');
+                
                 showNotification(`📊 RM ${rmNumber} sent to Google Sheets!`);
                 showStatus(`Success! RM ${rmNumber} logged to Google Sheets.`, 'success');
                 
             } catch (error) {
+                console.error('=== GOOGLE SHEETS ERROR ===');
                 console.error('Failed to send to Google Sheets:', error);
+                console.error('Error details:', error.message, error.stack);
+                console.error('=== END ERROR ===');
                 showNotification('❌ Failed to send to Google Sheets');
                 showStatus('Failed to send to Google Sheets. Check console for details.', 'error');
             }
         }
+
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
@@ -668,7 +681,6 @@
         const retakeBtn = document.getElementById('retakeBtn');
         const status = document.getElementById('status');
         const resultCard = document.getElementById('resultCard');
-        const resultText = document.getElementById('resultText');
         const resultType = document.getElementById('resultType');
         const confidenceBadge = document.getElementById('confidenceBadge');
         const capturedImageContainer = document.getElementById('capturedImageContainer');
@@ -679,42 +691,12 @@
         const uploadArea = document.getElementById('uploadArea');
         const advancedToggle = document.getElementById('advancedToggle');
         const advancedSettings = document.getElementById('advancedSettings');
-        const barcodeOverlay = document.getElementById('barcodeOverlay');
 
         let stream = null;
         let capturedImageData = null;
-        let currentMode = 'text';
+        let currentFilename = null;
+        let currentVerification = null;
         let isScanning = false;
-
-        // Mode switching
-        document.querySelectorAll('.mode-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                currentMode = btn.dataset.mode;
-                updateUI();
-            });
-        });
-
-        function updateUI() {
-            const isTextMode = currentMode === 'text';
-            advancedToggle.style.display = isTextMode ? 'block' : 'none';
-            
-            // Update process button text based on mode
-            if (currentMode === 'text') {
-                processBtn.innerHTML = '🔍 Advanced Scan';
-                resultType.textContent = 'OCR Result';
-                status.textContent = 'Choose camera or upload an image for text recognition';
-            } else if (currentMode === 'qr') {
-                processBtn.innerHTML = '🔍 Scan QR';
-                resultType.textContent = 'QR Code';
-                status.textContent = 'Choose camera or upload an image for QR code scanning';
-            } else {
-                processBtn.innerHTML = '🔍 Scan Barcode';
-                resultType.textContent = 'Barcode';
-                status.textContent = 'Choose camera or upload an image for barcode scanning';
-            }
-        }
 
         // Advanced settings toggle
         advancedToggle.addEventListener('click', () => {
@@ -756,16 +738,23 @@
                 return;
             }
 
+            currentFilename = file.name;
+            currentVerification = verifyScreenshotTimestamp(currentFilename);
+            
+            // Show verification result
+            showVerificationResult(currentVerification, currentFilename);
+            
+            if (!currentVerification.valid) {
+                showStatus('❌ Screenshot verification failed. Please upload a recent screenshot.', 'error');
+                return;
+            }
+
             const reader = new FileReader();
             reader.onload = (e) => {
                 capturedImageData = e.target.result;
                 displayCapturedImage(capturedImageData);
                 showProcessControls();
-                if (currentMode === 'text') {
-                    showStatus('Image uploaded! Click Advanced Scan for multi-technique OCR processing.', 'success');
-                } else {
-                    showStatus('Image uploaded successfully! Click Scan to process.', 'success');
-                }
+                showStatus('✅ Screenshot verified! Click Scan RM Number to process.', 'success');
             };
             reader.readAsDataURL(file);
         }
@@ -787,15 +776,11 @@
                 video.style.display = 'block';
                 uploadArea.style.display = 'none';
                 
-                if (currentMode !== 'text') {
-                    startBarcodeScanning();
-                }
-                
                 startCameraBtn.style.display = 'none';
                 captureBtn.disabled = false;
                 captureBtn.style.display = 'block';
                 
-                showStatus('Camera ready! Position your document or code.', 'success');
+                showStatus('Camera ready! Position your RM document.', 'success');
                 
             } catch (error) {
                 console.error('Camera error:', error);
@@ -811,22 +796,19 @@
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             capturedImageData = canvas.toDataURL('image/jpeg', 0.95);
             
+            // Camera captures don't have filename verification - always valid
+            currentFilename = `Camera_${new Date().toISOString().replace(/[:.]/g, '-')}.jpg`;
+            currentVerification = { valid: true, reason: 'Live camera capture', screenshotTime: new Date(), timeDiff: 0 };
+            
             displayCapturedImage(capturedImageData);
             stopCamera();
             showProcessControls();
-            showStatus('Image captured! Click Advanced Scan for multi-technique OCR processing.', 'success');
+            showStatus('Image captured! Click Scan RM Number to process.', 'success');
         });
 
         processBtn.addEventListener('click', async () => {
             if (!capturedImageData) return;
-            
-            if (currentMode === 'text') {
-                await performOCR();
-            } else if (currentMode === 'qr') {
-                await scanQRCode();
-            } else {
-                await scanBarcode();
-            }
+            await performOCR();
         });
 
         retakeBtn.addEventListener('click', () => {
@@ -854,13 +836,13 @@
                 stream.getTracks().forEach(track => track.stop());
                 stream = null;
             }
-            barcodeOverlay.style.display = 'none';
             isScanning = false;
         }
 
         function reset() {
             capturedImageContainer.innerHTML = '';
             resultCard.style.display = 'none';
+            document.getElementById('verificationSection').style.display = 'none';
             video.style.display = 'none';
             uploadArea.style.display = 'block';
             
@@ -871,10 +853,12 @@
             captureBtn.disabled = true;
             
             capturedImageData = null;
-            updateUI();
+            currentFilename = null;
+            currentVerification = null;
+            showStatus('Choose camera or upload a recent screenshot to start scanning', '');
         }
 
-        // Advanced image preprocessing - EXACT Sharp mode from working version
+        // Advanced image preprocessing - EXACT from original working code
         function preprocessImage(imageData, options = {}) {
             const { contrast = 1.0, brightness = 0, mode = 'subtle' } = options;
             
@@ -932,7 +916,7 @@
             });
         }
 
-        // Advanced OCR functionality - Fixed for Sharp PSM 6 combination
+        // Advanced OCR functionality - EXACT from original working code
         async function performOCR() {
             if (!capturedImageData) return;
             
@@ -943,7 +927,7 @@
                 const language = document.getElementById('languageSelect').value;
                 const psm = document.getElementById('psmSelect').value;
                 
-                showStatus('Extracting text... This may take a moment.', 'loading');
+                showStatus('Processing...', 'loading');
                 
                 // Generate multiple preprocessed versions - EXACT from working version
                 const variations = [
@@ -964,7 +948,7 @@
                 for (const variation of variations) {
                     for (const currentPsm of psmModes) {
                         try {
-                            showStatus(`Processing ${variation.name} (PSM ${currentPsm})...`, 'loading');
+                            showStatus(`Processing...`, 'loading');
                             console.log(`Starting OCR: ${variation.name} with PSM ${currentPsm}`);
                             
                             // Initialize Tesseract with progress tracking - EXACT from working version
@@ -976,7 +960,7 @@
                                         const currentProgress = (m.progress / totalAttempts) * 100;
                                         const totalProgress = Math.round(baseProgress + currentProgress);
                                         updateProgress(totalProgress);
-                                        showStatus(`Processing ${variation.name} (PSM ${currentPsm})... ${progress}%`, 'loading');
+                                        showStatus(`Processing... ${progress}%`, 'loading');
                                     }
                                 }
                             });
@@ -1036,14 +1020,14 @@
                     }
                 }
 
-                // Display results - EXACT from working version
+                // Display results - EXACT from working version but with UI changes
                 if (bestResult.text) {
-                    showResult(bestResult.text, bestResult.confidence, 'text');
-                    showStatus(`Text extraction complete! Best result from ${bestResult.variation} (${bestResult.confidence}% confidence)`, 'success');
-                    
-                    // Check for RM number and handle Google Sheets integration
                     const rmNumber = extractRMNumber(bestResult.text);
+                    
                     if (rmNumber) {
+                        showResult(bestResult.text, bestResult.confidence, 'text');
+                        showStatus(`Processing complete!`, 'success');
+                        
                         console.log(`RM Number detected: ${rmNumber}`);
                         
                         // Add visual indicator and manual send button
@@ -1064,140 +1048,31 @@
                         rmIndicator.appendChild(sendBtn);
                         resultHeader.appendChild(rmIndicator);
                         
-                        // Auto-send if enabled
-                        if (isAutoSendEnabled()) {
+                        // Auto-send if enabled and verification is valid - EXACT from original
+                        if (isAutoSendEnabled() && currentVerification && currentVerification.valid) {
                             setTimeout(() => {
                                 sendToGoogleSheets(rmNumber, `Valid RM OK FOR USE - ${rmNumber}`);
                             }, 1000);
+                        } else if (!currentVerification || !currentVerification.valid) {
+                            showStatus(`RM Number found but screenshot verification failed. Manual send only.`, 'warning');
                         }
+                    } else {
+                        showStatus('Invalid upload, upload the correct file', 'error');
                     }
                 } else {
-                    showStatus('No text detected in any variation. Try adjusting lighting or camera angle.', 'error');
+                    showStatus('Invalid upload, upload the correct file', 'error');
                 }
                 
             } catch (error) {
                 console.error('OCR Error:', error);
-                showStatus('Advanced extraction failed. Please try again.', 'error');
+                showStatus('Processing failed. Please try again.', 'error');
             } finally {
                 showProgress(false);
                 processBtn.disabled = false;
             }
         }
 
-        // QR Code scanning
-        async function scanQRCode() {
-            try {
-                showStatus('Scanning QR code...', 'loading');
-                
-                const img = new Image();
-                img.onload = () => {
-                    canvas.width = img.width;
-                    canvas.height = img.height;
-                    ctx.drawImage(img, 0, 0);
-                    
-                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                    const code = jsQR(imageData.data, imageData.width, imageData.height);
-                    
-                    if (code) {
-                        showResult(code.data, 100, 'qr');
-                        showStatus('QR code scanned successfully!', 'success');
-                    } else {
-                        showStatus('No QR code found. Try better lighting or position.', 'error');
-                    }
-                };
-                img.src = capturedImageData;
-                
-            } catch (error) {
-                console.error('QR scan error:', error);
-                showStatus('QR code scanning failed. Please try again.', 'error');
-            }
-        }
-
-        // Barcode scanning
-        async function scanBarcode() {
-            try {
-                showStatus('Scanning barcode...', 'loading');
-                
-                // Create temporary canvas for Quagga
-                const tempCanvas = document.createElement('canvas');
-                const tempCtx = tempCanvas.getContext('2d');
-                const img = new Image();
-                
-                img.onload = () => {
-                    tempCanvas.width = img.width;
-                    tempCanvas.height = img.height;
-                    tempCtx.drawImage(img, 0, 0);
-                    
-                    Quagga.decodeSingle({
-                        src: capturedImageData,
-                        numOfWorkers: 0,
-                        inputStream: {
-                            size: 800
-                        },
-                        locator: {
-                            patchSize: "medium",
-                            halfSample: true
-                        },
-                        decoder: {
-                            readers: ["code_128_reader", "ean_reader", "ean_8_reader", "code_39_reader"]
-                        }
-                    }, (result) => {
-                        if (result && result.codeResult) {
-                            showResult(result.codeResult.code, 95, 'barcode');
-                            showStatus('Barcode scanned successfully!', 'success');
-                        } else {
-                            showStatus('No barcode found. Try better lighting or position.', 'error');
-                        }
-                    });
-                };
-                img.src = capturedImageData;
-                
-            } catch (error) {
-                console.error('Barcode scan error:', error);
-                showStatus('Barcode scanning failed. Please try again.', 'error');
-            }
-        }
-
-        // Real-time barcode scanning
-        function startBarcodeScanning() {
-            if (currentMode === 'text') return;
-            
-            barcodeOverlay.style.display = 'flex';
-            isScanning = true;
-            
-            const scanFrame = () => {
-                if (!isScanning || !video.videoWidth) {
-                    requestAnimationFrame(scanFrame);
-                    return;
-                }
-                
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                ctx.drawImage(video, 0, 0);
-                
-                if (currentMode === 'qr') {
-                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                    const code = jsQR(imageData.data, imageData.width, imageData.height);
-                    
-                    if (code) {
-                        capturedImageData = canvas.toDataURL('image/jpeg', 0.95);
-                        displayCapturedImage(capturedImageData);
-                        stopCamera();
-                        showResult(code.data, 100, 'qr');
-                        showStatus('QR code detected automatically!', 'success');
-                        showProcessControls();
-                        return;
-                    }
-                }
-                
-                requestAnimationFrame(scanFrame);
-            };
-            
-            scanFrame();
-        }
-
         function showResult(text, confidence, type) {
-            resultText.textContent = text;
             confidenceBadge.textContent = `${Math.round(confidence)}% confident`;
             resultCard.style.display = 'block';
             
@@ -1227,26 +1102,27 @@
 
         // Google Sheets help modal functions
         function showGoogleSheetsHelp() {
-            document.getElementById('helpModal').style.display = 'flex';
+            alert('Google Sheets Setup:\n1. Create a Google Apps Script\n2. Deploy as web app\n3. Paste the URL in settings\n4. Test connection');
         }
 
-        function hideGoogleSheetsHelp() {
-            document.getElementById('helpModal').style.display = 'none';
-        }
-
-        // Test Google Sheets connection
+        // Test Google Sheets connection with enhanced debugging
         async function testGoogleSheetsConnection() {
             try {
                 showStatus('Testing Google Sheets connection...', 'loading');
                 
                 const testData = {
-                    rmNumber: 'TEST-1',
-                    fullText: 'Valid RM OK FOR USE - TEST-1',
+                    rmNumber: 'TEST-DEBUG',
+                    fullText: 'Valid RM OK FOR USE - TEST-DEBUG',
                     timestamp: new Date().toISOString()
                 };
                 
                 const googleSheetsUrl = getGoogleSheetsUrl();
+                
+                console.log('=== TEST CONNECTION DEBUG ===');
                 console.log('Testing connection to:', googleSheetsUrl);
+                console.log('Test data:', JSON.stringify(testData, null, 2));
+                console.log('Current time:', new Date().toISOString());
+                console.log('=== END TEST DEBUG ===');
                 
                 await fetch(googleSheetsUrl, {
                     method: 'POST',
@@ -1258,8 +1134,8 @@
                 });
                 
                 showNotification('✅ Test sent to Google Sheets!');
-                showStatus('Test successful! Check your Google Sheet for TEST-1 entry.', 'success');
-                console.log('Test data sent successfully');
+                showStatus('Test successful! Check BOTH sheets: "RM Numbers" AND "Command Tracking" for TEST-DEBUG entry.', 'success');
+                console.log('TEST: Check if TEST-DEBUG appears in both RM Numbers and Command Tracking sheets');
                 
             } catch (error) {
                 console.error('Test failed:', error);
@@ -1268,33 +1144,15 @@
             }
         }
 
-        // Copy functionality
-        resultText.addEventListener('click', async () => {
-            const text = resultText.textContent;
-            if (text && !text.includes('Tap here')) {
-                try {
-                    await navigator.clipboard.writeText(text);
-                    showNotification('📋 Copied to clipboard!');
-                } catch (error) {
-                    // Fallback selection
-                    const range = document.createRange();
-                    range.selectNode(resultText);
-                    window.getSelection().removeAllRanges();
-                    window.getSelection().addRange(range);
-                    showNotification('📋 Text selected!');
-                }
-            }
-        });
-
         // Cleanup on page unload
         window.addEventListener('beforeunload', () => {
             stopCamera();
         });
 
         // Initialize
-        updateUI();
+        showStatus('Choose camera or upload a recent screenshot to start scanning', '');
         
-        // Load saved settings or use default URL
+        // Load saved settings or use original working URL
         const defaultUrl = 'https://script.google.com/macros/s/AKfycbyLOohLJUOMODwxOrhqDXUWLD9ThKJ86qE4969NqXhj6l7o1U1wY_0HrPW7LQMfYwZ4oQ/exec';
         const savedUrl = localStorage.getItem('googleSheetsUrl') || defaultUrl;
         document.getElementById('googleSheetsUrl').value = savedUrl;
