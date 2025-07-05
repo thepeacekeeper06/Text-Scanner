@@ -421,7 +421,7 @@
                 <div class="upload-icon">📁</div>
                 <div class="upload-text">
                     Tap to upload screenshot<br>
-                    <small>📅 Must be from TODAY and within 2 minutes</small>
+                    <small>Must be taken within 2 minutes</small>
                 </div>
             </div>
             
@@ -546,214 +546,103 @@
             return checkbox.checked;
         }
         
-        // Ultra-robust screenshot timestamp parsing for ALL phone types
+        // Strict screenshot filename parsing - ONLY Screenshot_YYYYMMDD_HHMMSS_ format
         function parseScreenshotFilename(filename) {
-            console.log('=== UNIVERSAL FILENAME PARSING ===');
+            console.log('=== STRICT SCREENSHOT PARSING ===');
             console.log('Original filename:', filename);
             
-            // Step 1: Extract any 8-digit date (YYYYMMDD) and 6-digit time (HHMMSS)
-            const dateTimePatterns = [
-                // Standard Android: Screenshot_20250705_135046_Photos.jpg
-                /(\d{8})[_-](\d{6})/,
-                
-                // iOS style: Screenshot_2025-07-05-13-50-46.jpg
-                /(\d{4})[_-](\d{2})[_-](\d{2})[_-](\d{2})[_-](\d{2})[_-](\d{2})/,
-                
-                // Compact: Screenshot20250705135046.jpg
-                /(\d{8})(\d{6})/,
-                
-                // Spaced: Screenshot 2025 07 05 13 50 46.jpg
-                /(\d{4})\s+(\d{2})\s+(\d{2})\s+(\d{2})\s+(\d{2})\s+(\d{2})/,
-                
-                // Mixed separators: Screenshot-2025_07_05-13_50_46.jpg
-                /(\d{4})[_-](\d{2})[_-](\d{2})[_-](\d{2})[_-](\d{2})[_-](\d{2})/
-            ];
+            // ONLY accept Screenshot_YYYYMMDD_HHMMSS_ format - nothing else
+            const strictPattern = /^Screenshot_(\d{8})_(\d{6})_/;
+            const match = filename.match(strictPattern);
             
-            let year, month, day, hour, minute, second;
+            console.log('Strict pattern match:', match);
             
-            // Try each pattern
-            for (let i = 0; i < dateTimePatterns.length; i++) {
-                const match = filename.match(dateTimePatterns[i]);
-                console.log(`Pattern ${i + 1}:`, dateTimePatterns[i], '→', match);
-                
-                if (match) {
-                    if (match.length === 3) {
-                        // Format: YYYYMMDD_HHMMSS
-                        const dateStr = match[1];
-                        const timeStr = match[2];
-                        
-                        year = parseInt(dateStr.substring(0, 4));
-                        month = parseInt(dateStr.substring(4, 6)) - 1;
-                        day = parseInt(dateStr.substring(6, 8));
-                        hour = parseInt(timeStr.substring(0, 2));
-                        minute = parseInt(timeStr.substring(2, 4));
-                        second = parseInt(timeStr.substring(4, 6));
-                        
-                    } else if (match.length === 7) {
-                        // Format: YYYY_MM_DD_HH_MM_SS
-                        year = parseInt(match[1]);
-                        month = parseInt(match[2]) - 1;
-                        day = parseInt(match[3]);
-                        hour = parseInt(match[4]);
-                        minute = parseInt(match[5]);
-                        second = parseInt(match[6]);
-                    }
-                    
-                    console.log('Extracted:', {year, month: month+1, day, hour, minute, second});
-                    break;
-                }
+            if (!match) {
+                console.log('❌ Filename does not match required format: Screenshot_YYYYMMDD_HHMMSS_');
+                return null;
             }
             
-            // Fallback: Extract numbers and try to guess the format
-            if (!year) {
-                console.log('Fallback: Extracting all numbers...');
-                const numbers = filename.match(/\d+/g);
-                console.log('Found numbers:', numbers);
-                
-                if (numbers && numbers.length >= 1) {
-                    // Look for a long number that could be YYYYMMDDHHMMSS
-                    for (const num of numbers) {
-                        if (num.length === 14) {
-                            // YYYYMMDDHHMMSS format
-                            year = parseInt(num.substring(0, 4));
-                            month = parseInt(num.substring(4, 6)) - 1;
-                            day = parseInt(num.substring(6, 8));
-                            hour = parseInt(num.substring(8, 10));
-                            minute = parseInt(num.substring(10, 12));
-                            second = parseInt(num.substring(12, 14));
-                            console.log('14-digit fallback:', {year, month: month+1, day, hour, minute, second});
-                            break;
-                        } else if (num.length === 8 && num.startsWith('202')) {
-                            // Potential YYYYMMDD - look for next 6-digit number
-                            const dateNum = num;
-                            const nextNum = numbers.find(n => n.length === 6 && n !== dateNum);
-                            if (nextNum) {
-                                year = parseInt(dateNum.substring(0, 4));
-                                month = parseInt(dateNum.substring(4, 6)) - 1;
-                                day = parseInt(dateNum.substring(6, 8));
-                                hour = parseInt(nextNum.substring(0, 2));
-                                minute = parseInt(nextNum.substring(2, 4));
-                                second = parseInt(nextNum.substring(4, 6));
-                                console.log('8+6 digit fallback:', {year, month: month+1, day, hour, minute, second});
-                                break;
-                            }
-                        }
-                    }
-                }
+            const dateStr = match[1]; // YYYYMMDD
+            const timeStr = match[2]; // HHMMSS
+            
+            console.log('Extracted dateStr:', dateStr, 'timeStr:', timeStr);
+            
+            const year = parseInt(dateStr.substring(0, 4));
+            const month = parseInt(dateStr.substring(4, 6)) - 1; // JS months are 0-indexed
+            const day = parseInt(dateStr.substring(6, 8));
+            
+            const hour = parseInt(timeStr.substring(0, 2));
+            const minute = parseInt(timeStr.substring(2, 4));
+            const second = parseInt(timeStr.substring(4, 6));
+            
+            // Validate extracted values are reasonable
+            if (year < 2020 || year > 2030 || 
+                month < 0 || month > 11 || 
+                day < 1 || day > 31 || 
+                hour < 0 || hour > 23 || 
+                minute < 0 || minute > 59 || 
+                second < 0 || second > 59) {
+                console.log('❌ Invalid date/time values extracted');
+                return null;
             }
             
-            // Validate extracted values
-            if (year && year >= 2020 && year <= 2030 && 
-                month >= 0 && month <= 11 && 
-                day >= 1 && day <= 31 && 
-                hour >= 0 && hour <= 23 && 
-                minute >= 0 && minute <= 59 && 
-                second >= 0 && second <= 59) {
-                
-                const parsedDate = new Date(year, month, day, hour, minute, second);
-                console.log('✅ Successfully parsed:', parsedDate);
-                console.log('=== END UNIVERSAL PARSING ===');
-                return parsedDate;
-            }
+            const parsedDate = new Date(year, month, day, hour, minute, second);
+            console.log('✅ Successfully parsed:', parsedDate);
+            console.log('=== END STRICT PARSING ===');
             
-            console.log('❌ Failed to extract valid date/time');
-            console.log('=== END UNIVERSAL PARSING ===');
-            return null;
+            return parsedDate;
         }
         
         function verifyScreenshotTimestamp(filename, fileLastModified) {
-            console.log('=== STRICT DATE & TIME VERIFICATION ===');
+            console.log('=== STRICT VERIFICATION ===');
             console.log('Input filename:', filename);
-            console.log('File lastModified:', new Date(fileLastModified));
             
-            const currentTime = new Date();
-            const todayStart = new Date(currentTime.getFullYear(), currentTime.getMonth(), currentTime.getDate());
-            const yesterdayStart = new Date(todayStart.getTime() - 24 * 60 * 60 * 1000);
-            
-            let screenshotTime = null;
-            let verificationMethod = '';
-            
-            // First try to parse from filename
-            screenshotTime = parseScreenshotFilename(filename);
-            
-            if (screenshotTime) {
-                verificationMethod = 'filename';
-                console.log('✅ Using filename timestamp:', screenshotTime);
-            } else {
-                // STRICT: Only allow mobile temp files (pure numbers) to use lastModified
-                const isMobileTempFile = /^\d{10,}\.jpe?g$/i.test(filename);
-                
-                console.log('Filename parse failed. Checking if mobile temp file:', isMobileTempFile);
-                
-                if (isMobileTempFile) {
-                    screenshotTime = new Date(fileLastModified);
-                    verificationMethod = 'file_metadata';
-                    console.log('📱 Using file metadata for mobile temp file:', screenshotTime);
-                } else {
-                    console.log('❌ REJECTED: Not a valid screenshot filename and not a mobile temp file');
-                    return {
-                        valid: false,
-                        reason: 'Invalid file. Only screenshots with proper naming allowed.',
-                        screenshotTime: null,
-                        timeDiff: null
-                    };
-                }
-            }
-            
-            // STRICT DATE VALIDATION: Must be from today or very recent
-            const screenshotDate = new Date(screenshotTime.getFullYear(), screenshotTime.getMonth(), screenshotTime.getDate());
-            const isToday = screenshotDate.getTime() === todayStart.getTime();
-            const isYesterday = screenshotDate.getTime() === yesterdayStart.getTime();
-            
-            console.log('Screenshot date:', screenshotDate);
-            console.log('Today start:', todayStart);
-            console.log('Is today:', isToday);
-            console.log('Is yesterday:', isYesterday);
-            
-            // REJECT if not from today or yesterday
-            if (!isToday && !isYesterday) {
-                const daysDiff = Math.floor((currentTime.getTime() - screenshotTime.getTime()) / (24 * 60 * 60 * 1000));
-                console.log('❌ REJECTED: Screenshot is from', daysDiff, 'days ago');
+            // STRICT: Must start with "Screenshot_" and follow exact format
+            if (!filename.startsWith('Screenshot_')) {
+                console.log('❌ Filename does not start with "Screenshot_"');
                 return {
                     valid: false,
-                    reason: `Screenshot is from ${daysDiff} day${daysDiff !== 1 ? 's' : ''} ago. Only screenshots from today are allowed.`,
-                    screenshotTime: screenshotTime,
+                    reason: 'Invalid filename. Must start with "Screenshot_" and follow format: Screenshot_YYYYMMDD_HHMMSS_',
+                    screenshotTime: null,
                     timeDiff: null
                 };
             }
             
-            // STRICT TIME VALIDATION: Must be within 2 minutes
-            const timeDiffMs = currentTime.getTime() - screenshotTime.getTime();
-            const timeDiffMinutes = timeDiffMs / (1000 * 60);
-            const timeDiffHours = timeDiffMs / (1000 * 60 * 60);
+            // Parse timestamp from filename - NO fallbacks, NO bypasses
+            const screenshotTime = parseScreenshotFilename(filename);
+            const currentTime = new Date();
             
-            console.log('Time difference (minutes):', timeDiffMinutes);
-            console.log('Time difference (hours):', timeDiffHours);
-            console.log('Verification method:', verificationMethod);
+            console.log('Screenshot time:', screenshotTime);
+            console.log('Current time:', currentTime);
             
-            // If from yesterday, must be very recent (within 2 hours to handle midnight crossover)
-            if (isYesterday && timeDiffHours > 2) {
-                console.log('❌ REJECTED: Yesterday screenshot but too old');
+            if (!screenshotTime) {
+                console.log('❌ Failed to parse screenshot timestamp');
                 return {
                     valid: false,
-                    reason: `Screenshot from yesterday is too old (${Math.round(timeDiffHours * 10) / 10} hours ago). Take a fresh screenshot.`,
-                    screenshotTime: screenshotTime,
-                    timeDiff: Math.round(timeDiffMinutes * 10) / 10
+                    reason: 'Invalid screenshot format. Must be: Screenshot_YYYYMMDD_HHMMSS_Photos.jpg',
+                    screenshotTime: null,
+                    timeDiff: null
                 };
             }
             
-            // STRICT: 1 minute future, 2 minutes past for today's screenshots
-            const isTimeValid = timeDiffMinutes >= -1 && timeDiffMinutes <= 2;
+            const timeDiffMs = currentTime.getTime() - screenshotTime.getTime();
+            const timeDiffMinutes = timeDiffMs / (1000 * 60);
             
-            console.log('Is time valid:', isTimeValid);
+            console.log('Time difference (ms):', timeDiffMs);
+            console.log('Time difference (minutes):', timeDiffMinutes);
+            
+            // STRICT: 1 minute future, 2 minutes past - NO exceptions
+            const isValid = timeDiffMinutes >= -1 && timeDiffMinutes <= 2;
+            
+            console.log('Is valid:', isValid);
             console.log('=== END STRICT VERIFICATION ===');
             
-            if (!isTimeValid) {
+            if (!isValid) {
                 return {
                     valid: false,
                     reason: timeDiffMinutes < -1 ? 
-                        `Screenshot is from the future (${Math.abs(Math.round(timeDiffMinutes * 10) / 10)} minutes ahead)` :
-                        `Screenshot is too old (${Math.round(timeDiffMinutes * 10) / 10} minutes ago). Take a fresh screenshot within 2 minutes.`,
+                           `Screenshot is from the future (${Math.abs(Math.round(timeDiffMinutes * 10) / 10)} minutes ahead)` :
+                           `Screenshot is too old (${Math.round(timeDiffMinutes * 10) / 10} minutes ago). Please take a fresh screenshot.`,
                     screenshotTime: screenshotTime,
                     timeDiff: Math.round(timeDiffMinutes * 10) / 10
                 };
@@ -761,11 +650,10 @@
             
             return {
                 valid: true,
-                reason: `Valid ${isToday ? 'today\'s' : 'recent'} screenshot (verified via ${verificationMethod})`,
+                reason: 'Screenshot timestamp verified successfully',
                 screenshotTime: screenshotTime,
                 timeDiff: Math.round(timeDiffMinutes * 10) / 10,
-                method: verificationMethod,
-                dateStatus: isToday ? 'today' : 'yesterday'
+                method: 'filename'
             };
         }
         
@@ -953,31 +841,21 @@
             resetProcessingState();
 
             currentFilename = file.name;
+            currentVerification = verifyScreenshotTimestamp(currentFilename, file.lastModified);
             
-            console.log('=== STRICT FILE UPLOAD VALIDATION ===');
+            console.log('=== FILE UPLOAD DEBUG ===');
             console.log('Original filename:', file.name);
             console.log('File size:', file.size);
             console.log('File lastModified:', new Date(file.lastModified));
             console.log('File type:', file.type);
-            console.log('Current time:', new Date());
-            console.log('Today start:', new Date().setHours(0,0,0,0));
-            
-            // Perform STRICT verification
-            currentVerification = verifyScreenshotTimestamp(currentFilename, file.lastModified);
-            
-            console.log('STRICT Verification result:', currentVerification);
-            console.log('=== END STRICT VALIDATION ===');
+            console.log('Verification result:', currentVerification);
+            console.log('=== END FILE DEBUG ===');
             
             // Always hide verification details (as requested)
             showVerificationResult(currentVerification, currentFilename);
             
-            // STRICT: Reject if verification fails
             if (!currentVerification.valid) {
-                showStatus(`❌ REJECTED: ${currentVerification.reason}`, 'error');
-                showNotification('🚫 Upload rejected - Invalid screenshot or too old');
-                
-                // Clear the captured image data to prevent any processing
-                capturedImageData = null;
+                showStatus(`❌ ${currentVerification.reason}`, 'error');
                 return;
             }
 
@@ -988,9 +866,9 @@
                 showProcessControls();
                 
                 if (currentVerification.method === 'file_metadata') {
-                    showStatus('📱 Mobile screenshot verified! Click Scan RM Number to process.', 'success');
+                    showStatus('📱 Mobile screenshot verified via file timestamp! Click Scan RM Number to process.', 'success');
                 } else {
-                    showStatus('✅ Screenshot verified! Click Scan RM Number to process.', 'success');
+                    showStatus('✅ Screenshot verified via filename! Click Scan RM Number to process.', 'success');
                 }
             };
             reader.readAsDataURL(file);
@@ -1053,25 +931,15 @@
         });
 
         processBtn.addEventListener('click', async () => {
-            if (!capturedImageData) {
-                showStatus('No image to process. Please upload a screenshot first.', 'error');
-                return;
-            }
+            if (!capturedImageData) return;
             
-            // STRICT: Check if this image was already processed
+            // Check if this image was already processed
             if (imageAlreadyProcessed || isCurrentImageProcessed()) {
-                showNotification('🚫 This image was already scanned! Upload a new screenshot.');
-                showStatus('❌ Image already processed. Upload a fresh screenshot to scan again.', 'error');
+                showNotification('⚠️ This image was already scanned! Upload a new screenshot.');
+                showStatus('Image already processed. Please upload a new screenshot to scan again.', 'warning');
                 return;
             }
             
-            // STRICT: Double-check verification before processing
-            if (!currentVerification || !currentVerification.valid) {
-                showStatus('❌ Image verification failed. Cannot process.', 'error');
-                return;
-            }
-            
-            console.log('🔍 Starting OCR processing for verified image...');
             await performOCR();
         });
 
@@ -1130,7 +998,7 @@
             // Reset processing state for new image
             resetProcessingState();
             
-            showStatus('Choose camera or upload a screenshot from TODAY (within 2 minutes) to start scanning', '');
+            showStatus('Choose camera or upload a recent screenshot (within 2 minutes) to start scanning', '');
         }
 
         // Advanced image preprocessing - EXACT from original working code
@@ -1441,7 +1309,7 @@
         });
 
         // Initialize
-                    showStatus('Choose camera or upload a screenshot from TODAY (within 2 minutes) to start scanning', '');
+                    showStatus('Choose camera or upload a recent screenshot (within 2 minutes) to start scanning', '');
         
         // Load saved settings or use original working URL
         const defaultUrl = 'https://script.google.com/macros/s/AKfycbyLOohLJUOMODwxOrhqDXUWLD9ThKJ86qE4969NqXhj6l7o1U1wY_0HrPW7LQMfYwZ4oQ/exec';
