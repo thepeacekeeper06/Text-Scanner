@@ -421,7 +421,7 @@
                 <div class="upload-icon">📁</div>
                 <div class="upload-text">
                     Tap to upload screenshot<br>
-                    <small>⚠️ Screenshots only, taken within 2 minutes</small>
+                    <small>📅 Must be from TODAY and within 2 minutes</small>
                 </div>
             </div>
             
@@ -662,11 +662,14 @@
         }
         
         function verifyScreenshotTimestamp(filename, fileLastModified) {
-            console.log('=== STRICT VERIFICATION ===');
+            console.log('=== STRICT DATE & TIME VERIFICATION ===');
             console.log('Input filename:', filename);
             console.log('File lastModified:', new Date(fileLastModified));
             
             const currentTime = new Date();
+            const todayStart = new Date(currentTime.getFullYear(), currentTime.getMonth(), currentTime.getDate());
+            const yesterdayStart = new Date(todayStart.getTime() - 24 * 60 * 60 * 1000);
+            
             let screenshotTime = null;
             let verificationMethod = '';
             
@@ -678,47 +681,79 @@
                 console.log('✅ Using filename timestamp:', screenshotTime);
             } else {
                 // STRICT: Only allow mobile temp files (pure numbers) to use lastModified
-                const isMobileTempFile = /^\d{10,}\.jpe?g$/i.test(filename); // Only pure number files like 1000103762.jpg
+                const isMobileTempFile = /^\d{10,}\.jpe?g$/i.test(filename);
                 
                 console.log('Filename parse failed. Checking if mobile temp file:', isMobileTempFile);
-                console.log('Filename pattern test:', filename, '→', /^\d{10,}\.jpe?g$/i.test(filename));
                 
                 if (isMobileTempFile) {
-                    // Use file metadata for mobile browser uploads ONLY
                     screenshotTime = new Date(fileLastModified);
                     verificationMethod = 'file_metadata';
                     console.log('📱 Using file metadata for mobile temp file:', screenshotTime);
                 } else {
-                    // REJECT: Not a screenshot and not a mobile temp file
                     console.log('❌ REJECTED: Not a valid screenshot filename and not a mobile temp file');
                     return {
                         valid: false,
-                        reason: 'Invalid file. Only screenshots or mobile uploads allowed.',
+                        reason: 'Invalid file. Only screenshots with proper naming allowed.',
                         screenshotTime: null,
                         timeDiff: null
                     };
                 }
             }
             
-            // STRICT timing validation for ALL files
+            // STRICT DATE VALIDATION: Must be from today or very recent
+            const screenshotDate = new Date(screenshotTime.getFullYear(), screenshotTime.getMonth(), screenshotTime.getDate());
+            const isToday = screenshotDate.getTime() === todayStart.getTime();
+            const isYesterday = screenshotDate.getTime() === yesterdayStart.getTime();
+            
+            console.log('Screenshot date:', screenshotDate);
+            console.log('Today start:', todayStart);
+            console.log('Is today:', isToday);
+            console.log('Is yesterday:', isYesterday);
+            
+            // REJECT if not from today or yesterday
+            if (!isToday && !isYesterday) {
+                const daysDiff = Math.floor((currentTime.getTime() - screenshotTime.getTime()) / (24 * 60 * 60 * 1000));
+                console.log('❌ REJECTED: Screenshot is from', daysDiff, 'days ago');
+                return {
+                    valid: false,
+                    reason: `Screenshot is from ${daysDiff} day${daysDiff !== 1 ? 's' : ''} ago. Only screenshots from today are allowed.`,
+                    screenshotTime: screenshotTime,
+                    timeDiff: null
+                };
+            }
+            
+            // STRICT TIME VALIDATION: Must be within 2 minutes
             const timeDiffMs = currentTime.getTime() - screenshotTime.getTime();
             const timeDiffMinutes = timeDiffMs / (1000 * 60);
+            const timeDiffHours = timeDiffMs / (1000 * 60 * 60);
             
             console.log('Time difference (minutes):', timeDiffMinutes);
+            console.log('Time difference (hours):', timeDiffHours);
             console.log('Verification method:', verificationMethod);
             
-            // STRICT: 1 minute future, 2 minutes past - NO EXCEPTIONS
-            const isValid = timeDiffMinutes >= -1 && timeDiffMinutes <= 2;
+            // If from yesterday, must be very recent (within 2 hours to handle midnight crossover)
+            if (isYesterday && timeDiffHours > 2) {
+                console.log('❌ REJECTED: Yesterday screenshot but too old');
+                return {
+                    valid: false,
+                    reason: `Screenshot from yesterday is too old (${Math.round(timeDiffHours * 10) / 10} hours ago). Take a fresh screenshot.`,
+                    screenshotTime: screenshotTime,
+                    timeDiff: Math.round(timeDiffMinutes * 10) / 10
+                };
+            }
             
-            console.log('Is valid:', isValid);
+            // STRICT: 1 minute future, 2 minutes past for today's screenshots
+            const isTimeValid = timeDiffMinutes >= -1 && timeDiffMinutes <= 2;
+            
+            console.log('Is time valid:', isTimeValid);
             console.log('=== END STRICT VERIFICATION ===');
             
-            if (!isValid) {
+            if (!isTimeValid) {
                 return {
                     valid: false,
                     reason: timeDiffMinutes < -1 ? 
-                        `File is from the future (${Math.abs(Math.round(timeDiffMinutes * 10) / 10)} minutes ahead)` :
-                        `File is too old (${Math.round(timeDiffMinutes * 10) / 10} minutes ago). Take a fresh screenshot within 2 minutes.`,
+                        `Screenshot is from the future (${Math.abs(Math.round(timeDiffMinutes * 10) / 10)} minutes ahead)` :
+                        `Screenshot is too old (${Math.round(timeDiffMinutes * 10) / 10} minutes ago). Take a fresh screenshot within 2 minutes.`,
                     screenshotTime: screenshotTime,
                     timeDiff: Math.round(timeDiffMinutes * 10) / 10
                 };
@@ -726,10 +761,11 @@
             
             return {
                 valid: true,
-                reason: `Valid screenshot (verified via ${verificationMethod})`,
+                reason: `Valid ${isToday ? 'today\'s' : 'recent'} screenshot (verified via ${verificationMethod})`,
                 screenshotTime: screenshotTime,
                 timeDiff: Math.round(timeDiffMinutes * 10) / 10,
-                method: verificationMethod
+                method: verificationMethod,
+                dateStatus: isToday ? 'today' : 'yesterday'
             };
         }
         
@@ -923,6 +959,8 @@
             console.log('File size:', file.size);
             console.log('File lastModified:', new Date(file.lastModified));
             console.log('File type:', file.type);
+            console.log('Current time:', new Date());
+            console.log('Today start:', new Date().setHours(0,0,0,0));
             
             // Perform STRICT verification
             currentVerification = verifyScreenshotTimestamp(currentFilename, file.lastModified);
@@ -1092,7 +1130,7 @@
             // Reset processing state for new image
             resetProcessingState();
             
-            showStatus('Choose camera or upload a recent screenshot (within 2 minutes) to start scanning', '');
+            showStatus('Choose camera or upload a screenshot from TODAY (within 2 minutes) to start scanning', '');
         }
 
         // Advanced image preprocessing - EXACT from original working code
@@ -1403,7 +1441,7 @@
         });
 
         // Initialize
-                    showStatus('Choose camera or upload a recent screenshot (within 2 minutes) to start scanning', '');
+                    showStatus('Choose camera or upload a screenshot from TODAY (within 2 minutes) to start scanning', '');
         
         // Load saved settings or use original working URL
         const defaultUrl = 'https://script.google.com/macros/s/AKfycbyLOohLJUOMODwxOrhqDXUWLD9ThKJ86qE4969NqXhj6l7o1U1wY_0HrPW7LQMfYwZ4oQ/exec';
