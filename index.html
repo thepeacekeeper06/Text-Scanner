@@ -421,7 +421,7 @@
                 <div class="upload-icon">📁</div>
                 <div class="upload-text">
                     Tap to upload screenshot<br>
-                    <small>Must be taken within 2 minutes</small>
+                    <small>⚠️ Screenshots only, taken within 2 minutes</small>
                 </div>
             </div>
             
@@ -662,7 +662,7 @@
         }
         
         function verifyScreenshotTimestamp(filename, fileLastModified) {
-            console.log('=== SMART VERIFICATION WITH FILE METADATA ===');
+            console.log('=== STRICT VERIFICATION ===');
             console.log('Input filename:', filename);
             console.log('File lastModified:', new Date(fileLastModified));
             
@@ -677,44 +677,56 @@
                 verificationMethod = 'filename';
                 console.log('✅ Using filename timestamp:', screenshotTime);
             } else {
-                // Fallback to file's lastModified date for mobile uploads
-                screenshotTime = new Date(fileLastModified);
-                verificationMethod = 'file_metadata';
-                console.log('📱 Using file metadata timestamp:', screenshotTime);
+                // STRICT: Only allow mobile temp files (pure numbers) to use lastModified
+                const isMobileTempFile = /^\d{10,}\.jpe?g$/i.test(filename); // Only pure number files like 1000103762.jpg
                 
-                // Check if this looks like a mobile browser temp file
-                const isMobileTempFile = /^\d+\.(jpg|jpeg|png)$/i.test(filename) || 
-                                       filename.length < 15 || 
-                                       !filename.toLowerCase().includes('screenshot');
+                console.log('Filename parse failed. Checking if mobile temp file:', isMobileTempFile);
+                console.log('Filename pattern test:', filename, '→', /^\d{10,}\.jpe?g$/i.test(filename));
                 
-                if (!isMobileTempFile) {
-                    console.log('❌ Not a mobile temp file and no parseable filename');
+                if (isMobileTempFile) {
+                    // Use file metadata for mobile browser uploads ONLY
+                    screenshotTime = new Date(fileLastModified);
+                    verificationMethod = 'file_metadata';
+                    console.log('📱 Using file metadata for mobile temp file:', screenshotTime);
+                } else {
+                    // REJECT: Not a screenshot and not a mobile temp file
+                    console.log('❌ REJECTED: Not a valid screenshot filename and not a mobile temp file');
                     return {
                         valid: false,
-                        reason: 'Could not extract timestamp from filename. Please ensure screenshot has proper naming.',
+                        reason: 'Invalid file. Only screenshots or mobile uploads allowed.',
                         screenshotTime: null,
                         timeDiff: null
                     };
                 }
             }
             
+            // STRICT timing validation for ALL files
             const timeDiffMs = currentTime.getTime() - screenshotTime.getTime();
             const timeDiffMinutes = timeDiffMs / (1000 * 60);
             
             console.log('Time difference (minutes):', timeDiffMinutes);
             console.log('Verification method:', verificationMethod);
             
-            // Strict timing: 1 minute future, 2 minutes past
+            // STRICT: 1 minute future, 2 minutes past - NO EXCEPTIONS
             const isValid = timeDiffMinutes >= -1 && timeDiffMinutes <= 2;
             
             console.log('Is valid:', isValid);
-            console.log('=== END VERIFICATION ===');
+            console.log('=== END STRICT VERIFICATION ===');
+            
+            if (!isValid) {
+                return {
+                    valid: false,
+                    reason: timeDiffMinutes < -1 ? 
+                        `File is from the future (${Math.abs(Math.round(timeDiffMinutes * 10) / 10)} minutes ahead)` :
+                        `File is too old (${Math.round(timeDiffMinutes * 10) / 10} minutes ago). Take a fresh screenshot within 2 minutes.`,
+                    screenshotTime: screenshotTime,
+                    timeDiff: Math.round(timeDiffMinutes * 10) / 10
+                };
+            }
             
             return {
-                valid: isValid,
-                reason: isValid ? `Screenshot is recent (verified via ${verificationMethod})` : 
-                       timeDiffMinutes < -1 ? `Screenshot appears to be from the future (${Math.abs(Math.round(timeDiffMinutes * 10) / 10)} minutes ahead)` :
-                       `Screenshot is too old (${Math.round(timeDiffMinutes * 10) / 10} minutes ago). Please take a fresh screenshot.`,
+                valid: true,
+                reason: `Valid screenshot (verified via ${verificationMethod})`,
                 screenshotTime: screenshotTime,
                 timeDiff: Math.round(timeDiffMinutes * 10) / 10,
                 method: verificationMethod
@@ -905,21 +917,29 @@
             resetProcessingState();
 
             currentFilename = file.name;
-            currentVerification = verifyScreenshotTimestamp(currentFilename, file.lastModified);
             
-            console.log('=== FILE UPLOAD DEBUG ===');
+            console.log('=== STRICT FILE UPLOAD VALIDATION ===');
             console.log('Original filename:', file.name);
             console.log('File size:', file.size);
             console.log('File lastModified:', new Date(file.lastModified));
             console.log('File type:', file.type);
-            console.log('Verification result:', currentVerification);
-            console.log('=== END FILE DEBUG ===');
+            
+            // Perform STRICT verification
+            currentVerification = verifyScreenshotTimestamp(currentFilename, file.lastModified);
+            
+            console.log('STRICT Verification result:', currentVerification);
+            console.log('=== END STRICT VALIDATION ===');
             
             // Always hide verification details (as requested)
             showVerificationResult(currentVerification, currentFilename);
             
+            // STRICT: Reject if verification fails
             if (!currentVerification.valid) {
-                showStatus(`❌ ${currentVerification.reason}`, 'error');
+                showStatus(`❌ REJECTED: ${currentVerification.reason}`, 'error');
+                showNotification('🚫 Upload rejected - Invalid screenshot or too old');
+                
+                // Clear the captured image data to prevent any processing
+                capturedImageData = null;
                 return;
             }
 
@@ -930,9 +950,9 @@
                 showProcessControls();
                 
                 if (currentVerification.method === 'file_metadata') {
-                    showStatus('📱 Mobile screenshot verified via file timestamp! Click Scan RM Number to process.', 'success');
+                    showStatus('📱 Mobile screenshot verified! Click Scan RM Number to process.', 'success');
                 } else {
-                    showStatus('✅ Screenshot verified via filename! Click Scan RM Number to process.', 'success');
+                    showStatus('✅ Screenshot verified! Click Scan RM Number to process.', 'success');
                 }
             };
             reader.readAsDataURL(file);
@@ -995,15 +1015,25 @@
         });
 
         processBtn.addEventListener('click', async () => {
-            if (!capturedImageData) return;
-            
-            // Check if this image was already processed
-            if (imageAlreadyProcessed || isCurrentImageProcessed()) {
-                showNotification('⚠️ This image was already scanned! Upload a new screenshot.');
-                showStatus('Image already processed. Please upload a new screenshot to scan again.', 'warning');
+            if (!capturedImageData) {
+                showStatus('No image to process. Please upload a screenshot first.', 'error');
                 return;
             }
             
+            // STRICT: Check if this image was already processed
+            if (imageAlreadyProcessed || isCurrentImageProcessed()) {
+                showNotification('🚫 This image was already scanned! Upload a new screenshot.');
+                showStatus('❌ Image already processed. Upload a fresh screenshot to scan again.', 'error');
+                return;
+            }
+            
+            // STRICT: Double-check verification before processing
+            if (!currentVerification || !currentVerification.valid) {
+                showStatus('❌ Image verification failed. Cannot process.', 'error');
+                return;
+            }
+            
+            console.log('🔍 Starting OCR processing for verified image...');
             await performOCR();
         });
 
