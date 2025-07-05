@@ -421,7 +421,7 @@
                 <div class="upload-icon">📁</div>
                 <div class="upload-text">
                     Tap to upload screenshot<br>
-                    <small>📱 Mobile & Desktop friendly</small>
+                    <small>Must be taken within 5 minutes</small>
                 </div>
             </div>
             
@@ -661,61 +661,63 @@
             return null;
         }
         
-        function verifyScreenshotTimestamp(filename) {
-            console.log('=== SMART VERIFICATION ===');
+        function verifyScreenshotTimestamp(filename, fileLastModified) {
+            console.log('=== SMART VERIFICATION WITH FILE METADATA ===');
             console.log('Input filename:', filename);
+            console.log('File lastModified:', new Date(fileLastModified));
             
-            // Check if this looks like a mobile browser temp file
-            const isMobileTempFile = /^\d+\.(jpg|jpeg|png)$/i.test(filename) || 
-                                   filename.length < 15 || 
-                                   !filename.toLowerCase().includes('screenshot');
-            
-            if (isMobileTempFile) {
-                console.log('🔍 Detected mobile browser temp filename - allowing upload');
-                return {
-                    valid: true,
-                    reason: 'Mobile upload detected - timestamp verification bypassed',
-                    screenshotTime: new Date(),
-                    timeDiff: 0,
-                    isMobileUpload: true
-                };
-            }
-            
-            const screenshotTime = parseScreenshotFilename(filename);
             const currentTime = new Date();
+            let screenshotTime = null;
+            let verificationMethod = '';
             
-            console.log('Screenshot time:', screenshotTime);
-            console.log('Current time:', currentTime);
+            // First try to parse from filename
+            screenshotTime = parseScreenshotFilename(filename);
             
-            if (!screenshotTime) {
-                console.log('❌ Failed to parse filename - allowing anyway (might be mobile)');
-                return {
-                    valid: true,
-                    reason: 'Could not parse timestamp, but allowing upload (mobile compatibility)',
-                    screenshotTime: new Date(),
-                    timeDiff: 0,
-                    isMobileUpload: true
-                };
+            if (screenshotTime) {
+                verificationMethod = 'filename';
+                console.log('✅ Using filename timestamp:', screenshotTime);
+            } else {
+                // Fallback to file's lastModified date for mobile uploads
+                screenshotTime = new Date(fileLastModified);
+                verificationMethod = 'file_metadata';
+                console.log('📱 Using file metadata timestamp:', screenshotTime);
+                
+                // Check if this looks like a mobile browser temp file
+                const isMobileTempFile = /^\d+\.(jpg|jpeg|png)$/i.test(filename) || 
+                                       filename.length < 15 || 
+                                       !filename.toLowerCase().includes('screenshot');
+                
+                if (!isMobileTempFile) {
+                    console.log('❌ Not a mobile temp file and no parseable filename');
+                    return {
+                        valid: false,
+                        reason: 'Could not extract timestamp from filename. Please ensure screenshot has proper naming.',
+                        screenshotTime: null,
+                        timeDiff: null
+                    };
+                }
             }
             
             const timeDiffMs = currentTime.getTime() - screenshotTime.getTime();
             const timeDiffMinutes = timeDiffMs / (1000 * 60);
             
             console.log('Time difference (minutes):', timeDiffMinutes);
+            console.log('Verification method:', verificationMethod);
             
-            // Very generous window: 2 minutes future, 15 minutes past
-            const isValid = timeDiffMinutes >= -2 && timeDiffMinutes <= 15;
+            // Strict timing: 1 minute future, 5 minutes past
+            const isValid = timeDiffMinutes >= -1 && timeDiffMinutes <= 5;
             
             console.log('Is valid:', isValid);
             console.log('=== END VERIFICATION ===');
             
             return {
-                valid: true, // Always allow - verification is just for logging
-                reason: isValid ? 'Screenshot timestamp is valid' : 
-                       `Screenshot is ${Math.round(Math.abs(timeDiffMinutes))} minutes old but allowed`,
+                valid: isValid,
+                reason: isValid ? `Screenshot is recent (verified via ${verificationMethod})` : 
+                       timeDiffMinutes < -1 ? `Screenshot appears to be from the future (${Math.abs(Math.round(timeDiffMinutes * 10) / 10)} minutes ahead)` :
+                       `Screenshot is too old (${Math.round(timeDiffMinutes * 10) / 10} minutes ago). Please take a fresh screenshot.`,
                 screenshotTime: screenshotTime,
                 timeDiff: Math.round(timeDiffMinutes * 10) / 10,
-                isMobileUpload: false
+                method: verificationMethod
             };
         }
         
@@ -863,21 +865,34 @@
             }
 
             currentFilename = file.name;
-            currentVerification = verifyScreenshotTimestamp(currentFilename);
+            currentVerification = verifyScreenshotTimestamp(currentFilename, file.lastModified);
+            
+            console.log('=== FILE UPLOAD DEBUG ===');
+            console.log('Original filename:', file.name);
+            console.log('File size:', file.size);
+            console.log('File lastModified:', new Date(file.lastModified));
+            console.log('File type:', file.type);
+            console.log('Verification result:', currentVerification);
+            console.log('=== END FILE DEBUG ===');
             
             // Always hide verification details (as requested)
             showVerificationResult(currentVerification, currentFilename);
             
+            if (!currentVerification.valid) {
+                showStatus(`❌ ${currentVerification.reason}`, 'error');
+                return;
+            }
+
             const reader = new FileReader();
             reader.onload = (e) => {
                 capturedImageData = e.target.result;
                 displayCapturedImage(capturedImageData);
                 showProcessControls();
                 
-                if (currentVerification.isMobileUpload) {
-                    showStatus('📱 Mobile upload detected! Click Scan RM Number to process.', 'success');
+                if (currentVerification.method === 'file_metadata') {
+                    showStatus('📱 Mobile screenshot verified via file timestamp! Click Scan RM Number to process.', 'success');
                 } else {
-                    showStatus('✅ Screenshot verified! Click Scan RM Number to process.', 'success');
+                    showStatus('✅ Screenshot verified via filename! Click Scan RM Number to process.', 'success');
                 }
             };
             reader.readAsDataURL(file);
@@ -920,9 +935,15 @@
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             capturedImageData = canvas.toDataURL('image/jpeg', 0.95);
             
-            // Camera captures don't have filename verification - always valid
+            // Camera captures are always valid (live capture)
             currentFilename = `Camera_${new Date().toISOString().replace(/[:.]/g, '-')}.jpg`;
-            currentVerification = { valid: true, reason: 'Live camera capture', screenshotTime: new Date(), timeDiff: 0 };
+            currentVerification = { 
+                valid: true, 
+                reason: 'Live camera capture', 
+                screenshotTime: new Date(), 
+                timeDiff: 0,
+                method: 'camera'
+            };
             
             displayCapturedImage(capturedImageData);
             stopCamera();
@@ -979,7 +1000,7 @@
             capturedImageData = null;
             currentFilename = null;
             currentVerification = null;
-            showStatus('Choose camera or upload a screenshot from any phone to start scanning', '');
+            showStatus('Choose camera or upload a recent screenshot (within 5 minutes) to start scanning', '');
         }
 
         // Advanced image preprocessing - EXACT from original working code
@@ -1172,11 +1193,13 @@
                         rmIndicator.appendChild(sendBtn);
                         resultHeader.appendChild(rmIndicator);
                         
-                        // Auto-send if enabled (mobile uploads are always allowed)
-                        if (isAutoSendEnabled() && currentVerification && (currentVerification.valid || currentVerification.isMobileUpload)) {
+                        // Auto-send if enabled and verification passed
+                        if (isAutoSendEnabled() && currentVerification && currentVerification.valid) {
                             setTimeout(() => {
                                 sendToGoogleSheets(rmNumber, `Valid RM OK FOR USE - ${rmNumber}`);
                             }, 1000);
+                        } else if (!currentVerification || !currentVerification.valid) {
+                            showStatus(`RM Number found but screenshot verification failed. Manual send only.`, 'warning');
                         }
                     } else {
                         showStatus('Invalid upload, upload the correct file', 'error');
@@ -1272,7 +1295,7 @@
         });
 
         // Initialize
-                    showStatus('Choose camera or upload a screenshot from any phone to start scanning', '');
+                    showStatus('Choose camera or upload a recent screenshot (within 5 minutes) to start scanning', '');
         
         // Load saved settings or use original working URL
         const defaultUrl = 'https://script.google.com/macros/s/AKfycbyLOohLJUOMODwxOrhqDXUWLD9ThKJ86qE4969NqXhj6l7o1U1wY_0HrPW7LQMfYwZ4oQ/exec';
