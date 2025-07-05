@@ -421,7 +421,7 @@
                 <div class="upload-icon">📁</div>
                 <div class="upload-text">
                     Tap to upload screenshot<br>
-                    <small>Must be taken within 2 minutes</small>
+                    <small>Must start: Screenshot_YYYYMMDD_HHMMSS_</small>
                 </div>
             </div>
             
@@ -546,19 +546,19 @@
             return checkbox.checked;
         }
         
-        // Strict screenshot filename parsing - ONLY Screenshot_YYYYMMDD_HHMMSS_ format
+        // Strict screenshot filename parsing - MUST start with Screenshot_YYYYMMDD_HHMMSS_ (endings can vary)
         function parseScreenshotFilename(filename) {
             console.log('=== STRICT SCREENSHOT PARSING ===');
             console.log('Original filename:', filename);
             
-            // ONLY accept Screenshot_YYYYMMDD_HHMMSS_ format - nothing else
+            // MUST start with Screenshot_YYYYMMDD_HHMMSS_ - endings can vary (Photos.jpg, .jpg, etc.)
             const strictPattern = /^Screenshot_(\d{8})_(\d{6})_/;
             const match = filename.match(strictPattern);
             
             console.log('Strict pattern match:', match);
             
             if (!match) {
-                console.log('❌ Filename does not match required format: Screenshot_YYYYMMDD_HHMMSS_');
+                console.log('❌ Filename does not start with required format: Screenshot_YYYYMMDD_HHMMSS_');
                 return null;
             }
             
@@ -597,12 +597,12 @@
             console.log('=== STRICT VERIFICATION ===');
             console.log('Input filename:', filename);
             
-            // STRICT: Must start with "Screenshot_" and follow exact format
-            if (!filename.startsWith('Screenshot_')) {
-                console.log('❌ Filename does not start with "Screenshot_"');
+            // STRICT: Must start with exact format "Screenshot_YYYYMMDD_HHMMSS_" 
+            if (!filename.startsWith('Screenshot_') || !filename.match(/^Screenshot_\d{8}_\d{6}_/)) {
+                console.log('❌ Filename does not start with required format');
                 return {
                     valid: false,
-                    reason: 'Invalid filename. Must start with "Screenshot_" and follow format: Screenshot_YYYYMMDD_HHMMSS_',
+                    reason: 'Invalid filename. Must start with: Screenshot_YYYYMMDD_HHMMSS_ (any ending allowed)',
                     screenshotTime: null,
                     timeDiff: null
                 };
@@ -619,7 +619,7 @@
                 console.log('❌ Failed to parse screenshot timestamp');
                 return {
                     valid: false,
-                    reason: 'Invalid screenshot format. Must be: Screenshot_YYYYMMDD_HHMMSS_Photos.jpg',
+                    reason: 'Invalid screenshot format. Must start with: Screenshot_YYYYMMDD_HHMMSS_ (any ending)',
                     screenshotTime: null,
                     timeDiff: null
                 };
@@ -998,7 +998,7 @@
             // Reset processing state for new image
             resetProcessingState();
             
-            showStatus('Choose camera or upload a recent screenshot (within 2 minutes) to start scanning', '');
+            showStatus('Upload screenshot starting with Screenshot_YYYYMMDD_HHMMSS_ (within 2 minutes)', '');
         }
 
         // Advanced image preprocessing - EXACT from original working code
@@ -1309,7 +1309,7 @@
         });
 
         // Initialize
-                    showStatus('Choose camera or upload a recent screenshot (within 2 minutes) to start scanning', '');
+                    showStatus('Upload screenshot starting with Screenshot_YYYYMMDD_HHMMSS_ (within 2 minutes)', '');
         
         // Load saved settings or use original working URL
         const defaultUrl = 'https://script.google.com/macros/s/AKfycbyLOohLJUOMODwxOrhqDXUWLD9ThKJ86qE4969NqXhj6l7o1U1wY_0HrPW7LQMfYwZ4oQ/exec';
