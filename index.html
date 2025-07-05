@@ -546,34 +546,75 @@
             return checkbox.checked;
         }
         
-        // Screenshot timestamp verification
+        // Screenshot timestamp verification with enhanced mobile support
         function parseScreenshotFilename(filename) {
-            // Parse filename pattern: Screenshot_YYYYMMDD_HHMMSS_Photos.jpg
-            const match = filename.match(/Screenshot_(\d{8})_(\d{6})/);
-            if (!match) return null;
+            console.log('=== FILENAME PARSING DEBUG ===');
+            console.log('Original filename:', filename);
             
-            const dateStr = match[1]; // YYYYMMDD
-            const timeStr = match[2]; // HHMMSS
+            // Multiple patterns for different devices/platforms
+            const patterns = [
+                /Screenshot_(\d{8})_(\d{6})/,           // Android: Screenshot_YYYYMMDD_HHMMSS
+                /Screenshot_(\d{4}-\d{2}-\d{2})-(\d{2}-\d{2}-\d{2})/,  // iOS: Screenshot_YYYY-MM-DD-HH-MM-SS
+                /IMG_(\d{8})_(\d{6})/,                  // Some devices: IMG_YYYYMMDD_HHMMSS
+                /(\d{8})_(\d{6})/                       // Generic: YYYYMMDD_HHMMSS
+            ];
             
-            const year = parseInt(dateStr.substring(0, 4));
-            const month = parseInt(dateStr.substring(4, 6)) - 1; // JS months are 0-indexed
-            const day = parseInt(dateStr.substring(6, 8));
+            for (let i = 0; i < patterns.length; i++) {
+                const match = filename.match(patterns[i]);
+                console.log(`Pattern ${i + 1} (${patterns[i]}):`, match);
+                
+                if (match) {
+                    let dateStr, timeStr;
+                    
+                    if (match[1].includes('-')) {
+                        // iOS format: YYYY-MM-DD
+                        dateStr = match[1].replace(/-/g, '');
+                        timeStr = match[2].replace(/-/g, '');
+                    } else {
+                        // Android format: YYYYMMDD
+                        dateStr = match[1];
+                        timeStr = match[2];
+                    }
+                    
+                    console.log('Parsed dateStr:', dateStr, 'timeStr:', timeStr);
+                    
+                    const year = parseInt(dateStr.substring(0, 4));
+                    const month = parseInt(dateStr.substring(4, 6)) - 1; // JS months are 0-indexed
+                    const day = parseInt(dateStr.substring(6, 8));
+                    
+                    const hour = parseInt(timeStr.substring(0, 2));
+                    const minute = parseInt(timeStr.substring(2, 4));
+                    const second = parseInt(timeStr.substring(4, 6));
+                    
+                    const parsedDate = new Date(year, month, day, hour, minute, second);
+                    console.log('Parsed date:', parsedDate);
+                    console.log('=== END FILENAME DEBUG ===');
+                    
+                    return parsedDate;
+                }
+            }
             
-            const hour = parseInt(timeStr.substring(0, 2));
-            const minute = parseInt(timeStr.substring(2, 4));
-            const second = parseInt(timeStr.substring(4, 6));
-            
-            return new Date(year, month, day, hour, minute, second);
+            console.log('No pattern matched!');
+            console.log('=== END FILENAME DEBUG ===');
+            return null;
         }
         
         function verifyScreenshotTimestamp(filename) {
+            console.log('=== TIMESTAMP VERIFICATION DEBUG ===');
+            console.log('Input filename:', filename);
+            
             const screenshotTime = parseScreenshotFilename(filename);
             const currentTime = new Date();
             
+            console.log('Screenshot time:', screenshotTime);
+            console.log('Current time:', currentTime);
+            console.log('Current timezone offset:', currentTime.getTimezoneOffset(), 'minutes');
+            
             if (!screenshotTime) {
+                console.log('Failed to parse filename');
                 return {
                     valid: false,
-                    reason: 'Invalid filename format. Expected: Screenshot_YYYYMMDD_HHMMSS_Photos.jpg',
+                    reason: 'Invalid filename format. Expected formats: Screenshot_YYYYMMDD_HHMMSS or Screenshot_YYYY-MM-DD-HH-MM-SS',
                     screenshotTime: null,
                     timeDiff: null
                 };
@@ -582,16 +623,22 @@
             const timeDiffMs = currentTime.getTime() - screenshotTime.getTime();
             const timeDiffMinutes = timeDiffMs / (1000 * 60);
             
-            // Allow up to 2 minutes
-            const isValid = timeDiffMinutes >= 0 && timeDiffMinutes <= 2;
+            console.log('Time difference (ms):', timeDiffMs);
+            console.log('Time difference (minutes):', timeDiffMinutes);
+            
+            // Increased to 5 minutes for mobile compatibility
+            const isValid = timeDiffMinutes >= -1 && timeDiffMinutes <= 5; // Allow 1 min future, 5 min past
+            
+            console.log('Is valid:', isValid);
+            console.log('=== END VERIFICATION DEBUG ===');
             
             return {
                 valid: isValid,
                 reason: isValid ? 'Screenshot is recent and valid' : 
-                       timeDiffMinutes < 0 ? 'Screenshot appears to be from the future' :
-                       `Screenshot is too old (${Math.round(timeDiffMinutes)} minutes ago)`,
+                       timeDiffMinutes < -1 ? 'Screenshot appears to be from the future' :
+                       `Screenshot is too old (${Math.round(timeDiffMinutes * 10) / 10} minutes ago)`,
                 screenshotTime: screenshotTime,
-                timeDiff: Math.round(timeDiffMinutes * 100) / 100 // Round to 2 decimal places
+                timeDiff: Math.round(timeDiffMinutes * 10) / 10 // Round to 1 decimal place
             };
         }
         
