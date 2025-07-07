@@ -161,16 +161,7 @@
             color: white;
         }
 
-        .btn-warning {
-            background: #ffc107;
-            color: #212529;
-            border: 2px solid #ffc107;
-        }
 
-        .btn-warning:hover:not(:disabled) {
-            background: #e0a800;
-            border-color: #e0a800;
-        }
 
         .btn:disabled {
             opacity: 0.6;
@@ -361,64 +352,7 @@
             transform: translateX(0);
         }
 
-        .verification-section {
-            background: rgba(255, 193, 7, 0.1);
-            border: 1px solid #ffc107;
-            border-radius: 12px;
-            padding: 15px;
-            margin: 15px 0;
-            display: none;
-        }
 
-        .verification-header {
-            font-weight: 600;
-            color: #856404;
-            margin-bottom: 10px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .verification-details {
-            font-size: 0.85rem;
-            color: #856404;
-            line-height: 1.4;
-        }
-
-        .manual-override {
-            margin-top: 10px;
-            width: 100%;
-        }
-
-        .suggestions-box {
-            background: rgba(23, 162, 184, 0.1);
-            border: 1px solid #17a2b8;
-            border-radius: 8px;
-            padding: 12px;
-            margin-top: 10px;
-            font-size: 0.8rem;
-        }
-
-        .suggestions-header {
-            font-weight: 600;
-            color: #117a8b;
-            margin-bottom: 5px;
-        }
-
-        .suggestions-list {
-            color: #117a8b;
-            list-style: none;
-            padding: 0;
-        }
-
-        .suggestions-list li {
-            margin: 3px 0;
-        }
-
-        .suggestions-list li:before {
-            content: "• ";
-            color: #17a2b8;
-        }
 
         /* Mobile optimizations */
         @media (max-width: 480px) {
@@ -473,21 +407,14 @@
                 <div class="upload-icon">📁</div>
                 <div class="upload-text">
                     🇮🇳 Upload Screenshot<br>
-                    <small>📱 Mobile: 10min limit | 💻 Desktop: 2min limit</small>
+                    <small>📱 Mobile: 2min limit | 💻 Desktop: 2min limit</small>
                 </div>
             </div>
             
             <input type="file" id="fileInput" class="file-input" accept="image/*">
         </div>
 
-        <div class="verification-section" id="verificationSection">
-            <div class="verification-header">
-                🕐 Metadata Analysis
-            </div>
-            <div class="verification-details" id="verificationDetails">
-                Analyzing image metadata...
-            </div>
-        </div>
+
 
         <div class="controls" id="controls">
             <button class="btn btn-primary" id="startCamera">
@@ -931,101 +858,7 @@
             return result;
         }
         
-        function showVerificationResult(verification, filename) {
-            const verificationSection = document.getElementById('verificationSection');
-            const verificationDetails = document.getElementById('verificationDetails');
-            
-            verificationSection.style.display = 'block';
-            
-            if (verification.valid) {
-                verificationSection.style.background = 'rgba(39, 174, 96, 0.1)';
-                verificationSection.style.borderColor = '#27ae60';
-                verificationDetails.style.color = '#155724';
-                
-                verificationDetails.innerHTML = `
-                    ✅ <strong>Verification Passed</strong><br>
-                    📁 File: ${filename}<br>
-                    🕐 Method: ${verification.method}<br>
-                    ⏱️ Age: ${verification.timeDiff} minutes<br>
-                    🇮🇳 IST: ${verification.screenshotTime.toLocaleString()}<br>
-                    ✓ ${verification.reason}
-                `;
-                
-                // Remove any existing manual override button
-                const existingOverride = verificationSection.querySelector('.manual-override');
-                if (existingOverride) {
-                    existingOverride.remove();
-                }
-                
-            } else {
-                verificationSection.style.background = 'rgba(231, 76, 60, 0.1)';
-                verificationSection.style.borderColor = '#e74c3c';
-                verificationDetails.style.color = '#721c24';
-                
-                verificationDetails.innerHTML = `
-                    ❌ <strong>Verification Failed</strong><br>
-                    📁 File: ${filename}<br>
-                    🕐 Method: ${verification.method}<br>
-                    ⏱️ Age: ${verification.timeDiff} minutes<br>
-                    🇮🇳 IST: ${verification.screenshotTime ? verification.screenshotTime.toLocaleString() : 'not found'}<br>
-                    ❌ ${verification.reason}
-                `;
-                
-                // Add suggestions if available
-                if (verification.suggestions && verification.suggestions.length > 0) {
-                    const suggestionsBox = document.createElement('div');
-                    suggestionsBox.className = 'suggestions-box';
-                    suggestionsBox.innerHTML = `
-                        <div class="suggestions-header">💡 Suggestions:</div>
-                        <ul class="suggestions-list">
-                            ${verification.suggestions.map(s => `<li>${s}</li>`).join('')}
-                        </ul>
-                    `;
-                    verificationDetails.appendChild(suggestionsBox);
-                }
-                
-                // Add manual override button if not already present
-                const existingOverride = verificationSection.querySelector('.manual-override');
-                if (!existingOverride) {
-                    const overrideBtn = createManualOverrideButton();
-                    verificationSection.appendChild(overrideBtn);
-                }
-            }
-        }
-        
-        function createManualOverrideButton() {
-            const button = document.createElement('button');
-            button.className = 'btn btn-warning manual-override';
-            button.innerHTML = '🔓 Manual Override (Admin)';
-            button.onclick = () => {
-                const confirmation = confirm(
-                    'Manual Override Warning\n\n' +
-                    'This will bypass timestamp verification.\n' +
-                    'Only use for:\n' +
-                    '• Testing purposes\n' +
-                    '• Known valid screenshots\n' +
-                    '• Emergency situations\n\n' +
-                    'Continue with manual override?'
-                );
-                
-                if (confirmation) {
-                    currentVerification = {
-                        valid: true,
-                        reason: '🔓 Manual override applied by admin',
-                        method: 'manual_override',
-                        timeDiff: 0,
-                        screenshotTime: convertToIST(new Date()),
-                        currentTime: convertToIST(new Date()),
-                        extractionDetails: { source: 'manual_override' }
-                    };
-                    
-                    showVerificationResult(currentVerification, currentFilename);
-                    showStatus('✅ Manual override applied - you can now scan the image', 'success');
-                    showProcessControls();
-                }
-            };
-            return button;
-        }
+
         
         // Extract RM number from text
         function extractRMNumber(text) {
@@ -1181,13 +1014,13 @@
             resetProcessingState();
             currentFilename = file.name;
             
-            showStatus('📊 Analyzing file metadata...', 'loading');
+            showStatus('📊 Validating file...', 'loading');
             
             const reader = new FileReader();
             reader.onload = async (e) => {
                 capturedImageData = e.target.result;
                 
-                // Enhanced verification with image data
+                // Enhanced verification with image data (background only)
                 currentVerification = await verifyScreenshotTimestamp(
                     currentFilename, 
                     file.lastModified, 
@@ -1195,13 +1028,12 @@
                 );
                 
                 displayCapturedImage(capturedImageData);
-                showVerificationResult(currentVerification, currentFilename);
                 
                 if (currentVerification.valid) {
                     showProcessControls();
-                    showStatus(`✅ File verified! Age: ${currentVerification.timeDiff}min`, 'success');
+                    showStatus('✅ File ready for scanning', 'success');
                 } else {
-                    showStatus(currentVerification.reason, 'error');
+                    showStatus('❌ Please upload a recent screenshot', 'error');
                 }
             };
             
@@ -1318,7 +1150,6 @@
         function reset() {
             capturedImageContainer.innerHTML = '';
             resultCard.style.display = 'none';
-            document.getElementById('verificationSection').style.display = 'none';
             video.style.display = 'none';
             uploadArea.style.display = 'block';
             
