@@ -407,7 +407,7 @@
                 <div class="upload-icon">📁</div>
                 <div class="upload-text">
                     🇮🇳 Upload Screenshot<br>
-                    <small>📱 Mobile: 2min limit | 💻 Desktop: 2min limit</small>
+                    <small>📱 Mobile: 10min limit | 💻 Desktop: 2min limit</small>
                 </div>
             </div>
             
@@ -1033,6 +1033,7 @@
                     showProcessControls();
                     showStatus('✅ File ready for scanning', 'success');
                 } else {
+                    showRetakeOption();
                     showStatus('❌ Please upload a recent screenshot', 'error');
                 }
             };
@@ -1138,6 +1139,12 @@
                 processBtn.style.opacity = '1';
                 processBtn.innerHTML = '🔍 Scan RM Number';
             }
+        }
+
+        function showRetakeOption() {
+            captureBtn.style.display = 'none';
+            processBtn.style.display = 'none';
+            retakeBtn.style.display = 'block';
         }
 
         function stopCamera() {
