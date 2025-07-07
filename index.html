@@ -764,121 +764,146 @@
         
         async function verifyScreenshotTimestamp(filename, fileLastModified, imageData = null) {
             console.log('=== MOBILE-FRIENDLY IST VERIFICATION ===');
+            console.log('Processing file:', filename);
             
-            // Get current time in IST
-            const currentTimeLocal = new Date();
-            const currentTimeIST = convertToIST(currentTimeLocal);
-            
-            // Check if this is clearly a screenshot by filename
-            const isNamedScreenshot = /screenshot/i.test(filename) || 
-                                     /screen_?shot/i.test(filename) ||
-                                     /capture/i.test(filename);
-            
-            // Check if this looks like a mobile browser temp file
-            const isMobileTempFile = /^\d{1,12}\.(jpg|jpeg|png)$/i.test(filename);
-            
-            let screenshotTime = null;
-            let verificationMethod = '';
-            let extractionDetails = {};
-            
-            // Handle named screenshots (desktop/some mobile apps)
-            if (isNamedScreenshot) {
-                screenshotTime = parseScreenshotFilename(filename);
-                if (screenshotTime) {
-                    screenshotTime = convertToIST(screenshotTime);
-                    verificationMethod = 'filename_timestamp';
-                    extractionDetails = {
-                        source: 'filename',
-                        originalTime: parseScreenshotFilename(filename),
-                        convertedTime: screenshotTime
-                    };
-                } else {
+            try {
+                // Get current time in IST
+                const currentTimeLocal = new Date();
+                const currentTimeIST = convertToIST(currentTimeLocal);
+                
+                // Check if this is clearly a screenshot by filename
+                const isNamedScreenshot = /screenshot/i.test(filename) || 
+                                         /screen_?shot/i.test(filename) ||
+                                         /capture/i.test(filename);
+                
+                // Check if this looks like a mobile browser temp file
+                const isMobileTempFile = /^\d{1,12}\.(jpg|jpeg|png)$/i.test(filename);
+                
+                console.log('File classification:', { isNamedScreenshot, isMobileTempFile });
+                
+                let screenshotTime = null;
+                let verificationMethod = '';
+                
+                // Handle named screenshots (desktop/some mobile apps)
+                if (isNamedScreenshot) {
+                    console.log('Processing named screenshot...');
+                    screenshotTime = parseScreenshotFilename(filename);
+                    if (screenshotTime) {
+                        screenshotTime = convertToIST(screenshotTime);
+                        verificationMethod = 'filename_timestamp';
+                    } else {
+                        return {
+                            valid: false,
+                            reason: 'Screenshot filename detected but timestamp could not be parsed.',
+                            screenshotTime: null,
+                            timeDiff: null,
+                            method: 'failed_filename_parse'
+                        };
+                    }
+                }
+                
+                // Handle mobile temp files - ALWAYS try this for numeric filenames
+                else if (isMobileTempFile) {
+                    console.log('Processing mobile temp file...');
+                    
+                    // Try EXIF first if image data is available
+                    if (imageData) {
+                        console.log('Attempting EXIF extraction...');
+                        try {
+                            const exifCreationTime = await extractImageCreationTime(imageData);
+                            if (exifCreationTime) {
+                                screenshotTime = convertToIST(exifCreationTime);
+                                verificationMethod = 'exif_metadata';
+                                console.log('EXIF time found:', screenshotTime);
+                            }
+                        } catch (error) {
+                            console.log('EXIF extraction failed:', error);
+                        }
+                    }
+                    
+                    // If no EXIF found, ALWAYS use file metadata for mobile temp files
+                    if (!screenshotTime) {
+                        console.log('Using file metadata for mobile temp file...');
+                        const fileTime = new Date(fileLastModified);
+                        screenshotTime = convertToIST(fileTime);
+                        verificationMethod = 'file_metadata_mobile';
+                        console.log('File metadata time (IST):', screenshotTime);
+                    }
+                }
+                
+                // Reject only if it's not a screenshot and not a mobile temp file
+                else {
                     return {
                         valid: false,
-                        reason: 'Screenshot filename detected but timestamp could not be parsed.',
+                        reason: 'File must be a screenshot. Please take a screenshot and upload.',
                         screenshotTime: null,
                         timeDiff: null,
-                        method: 'failed_filename_parse'
+                        method: 'rejected_not_screenshot'
                     };
                 }
-            }
-            
-            // Handle mobile temp files - be more permissive but secure
-            else if (isMobileTempFile) {
-                console.log('📱 Mobile temp file detected - trying multiple methods...');
                 
-                // Try EXIF first
-                let exifCreationTime = null;
-                if (imageData) {
-                    exifCreationTime = await extractImageCreationTime(imageData);
+                // Ensure we have a valid screenshot time
+                if (!screenshotTime || isNaN(screenshotTime.getTime())) {
+                    console.log('No valid timestamp found');
+                    return {
+                        valid: false,
+                        reason: 'Could not extract valid timestamp from file. Please try again.',
+                        screenshotTime: null,
+                        timeDiff: null,
+                        method: 'no_valid_timestamp'
+                    };
                 }
                 
-                if (exifCreationTime) {
-                    screenshotTime = convertToIST(exifCreationTime);
-                    verificationMethod = 'exif_metadata';
-                    extractionDetails = {
-                        source: 'exif',
-                        originalTime: exifCreationTime,
-                        convertedTime: screenshotTime
-                    };
+                // Calculate time difference in IST
+                const timeDiffMs = currentTimeIST.getTime() - screenshotTime.getTime();
+                const timeDiffMinutes = timeDiffMs / (1000 * 60);
+                
+                console.log('Time calculation:', {
+                    currentTimeIST: currentTimeIST.toLocaleString(),
+                    screenshotTime: screenshotTime.toLocaleString(),
+                    timeDiffMinutes: timeDiffMinutes
+                });
+                
+                // MOBILE-FRIENDLY VALIDATION: More generous for mobile uploads
+                let isValid = false;
+                let timeLimit = 2; // default 2 minutes
+                
+                if (verificationMethod === 'file_metadata_mobile') {
+                    // More generous for mobile uploads using file metadata
+                    timeLimit = 5; // 5 minutes for mobile
+                    isValid = timeDiffMinutes >= -1 && timeDiffMinutes <= 5;
                 } else {
-                    // Fallback to file modification time (more permissive for mobile)
-                    const fileTime = new Date(fileLastModified);
-                    screenshotTime = convertToIST(fileTime);
-                    verificationMethod = 'file_metadata_mobile';
-                    extractionDetails = {
-                        source: 'file_metadata',
-                        originalTime: fileTime,
-                        convertedTime: screenshotTime,
-                        note: 'Mobile browser upload - using file timestamp'
-                    };
+                    // Standard validation for named screenshots and EXIF data
+                    timeLimit = 2;
+                    isValid = timeDiffMinutes >= -0.5 && timeDiffMinutes <= 2;
                 }
-            }
-            
-            // Reject if no valid timestamp found
-            else {
+                
+                const result = {
+                    valid: isValid,
+                    reason: isValid ? `Screenshot verified in IST (${verificationMethod}, ${timeLimit}min limit)` : 
+                           timeDiffMinutes < -1 ? `Screenshot appears to be from the future (${Math.abs(Math.round(timeDiffMinutes * 10) / 10)} minutes ahead in IST)` :
+                           `Screenshot is ${Math.round(timeDiffMinutes * 10) / 10} minutes old in IST. Limit: ${timeLimit} minutes.`,
+                    screenshotTime: screenshotTime,
+                    currentTime: currentTimeIST,
+                    timeDiff: Math.round(timeDiffMinutes * 10) / 10,
+                    method: verificationMethod,
+                    timezone: 'IST',
+                    timeLimit: timeLimit
+                };
+                
+                console.log('Verification result:', result);
+                return result;
+                
+            } catch (error) {
+                console.error('Verification error:', error);
                 return {
                     valid: false,
-                    reason: 'File must be a screenshot with valid timestamp. Please take a fresh screenshot.',
+                    reason: 'Error processing file. Please try again.',
                     screenshotTime: null,
                     timeDiff: null,
-                    method: 'rejected_not_screenshot'
+                    method: 'error'
                 };
             }
-            
-            // Calculate time difference in IST
-            const timeDiffMs = currentTimeIST.getTime() - screenshotTime.getTime();
-            const timeDiffMinutes = timeDiffMs / (1000 * 60);
-            
-            // MOBILE-FRIENDLY VALIDATION: More generous for mobile uploads
-            let isValid = false;
-            let timeLimit = 2; // default 2 minutes
-            
-            if (verificationMethod === 'file_metadata_mobile') {
-                // More generous for mobile uploads using file metadata
-                timeLimit = 5; // 5 minutes for mobile
-                isValid = timeDiffMinutes >= -1 && timeDiffMinutes <= 5;
-            } else {
-                // Standard validation for named screenshots and EXIF data
-                isValid = timeDiffMinutes >= -0.5 && timeDiffMinutes <= 2;
-            }
-            
-            const result = {
-                valid: isValid,
-                reason: isValid ? `✅ Screenshot verified in IST (${verificationMethod}, ${timeLimit}min limit)` : 
-                       timeDiffMinutes < -0.5 ? `Screenshot appears to be from the future (${Math.abs(Math.round(timeDiffMinutes * 10) / 10)} minutes ahead in IST)` :
-                       `🇮🇳 Screenshot is ${Math.round(timeDiffMinutes * 10) / 10} minutes old in IST. Limit: ${timeLimit} minutes for ${verificationMethod}.`,
-                screenshotTime: screenshotTime,
-                currentTime: currentTimeIST,
-                timeDiff: Math.round(timeDiffMinutes * 10) / 10,
-                method: verificationMethod,
-                timezone: 'IST',
-                timeLimit: timeLimit,
-                extractionDetails: extractionDetails
-            };
-            
-            console.log('Mobile-friendly verification result:', result);
-            return result;
         }
         
         function showVerificationResult(verification, filename) {
