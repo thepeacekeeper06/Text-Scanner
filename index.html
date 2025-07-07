@@ -420,8 +420,8 @@
             <div class="upload-area" id="uploadArea">
                 <div class="upload-icon">📁</div>
                 <div class="upload-text">
-                    🇮🇳 Upload Screenshot (IST Timezone)<br>
-                    <small>Must be taken within 2 minutes in Indian time</small>
+                    🇮🇳 Upload Screenshot<br>
+                    <small>📱 Mobile: 5min limit | 💻 Desktop: 2min limit</small>
                 </div>
             </div>
             
@@ -430,10 +430,10 @@
 
         <div class="verification-section" id="verificationSection">
             <div class="verification-header">
-                🕐 Screenshot Timestamp Verification
+                🕐 Metadata Analysis
             </div>
             <div class="verification-details" id="verificationDetails">
-                Checking screenshot timestamp...
+                Analyzing image metadata...
             </div>
         </div>
 
@@ -763,24 +763,11 @@
         }
         
         async function verifyScreenshotTimestamp(filename, fileLastModified, imageData = null) {
-            console.log('=== IST TIMEZONE SCREENSHOT VERIFICATION ===');
+            console.log('=== MOBILE-FRIENDLY IST VERIFICATION ===');
             
             // Get current time in IST
             const currentTimeLocal = new Date();
             const currentTimeIST = convertToIST(currentTimeLocal);
-            
-            console.log('🕐 CURRENT TIME ANALYSIS:');
-            console.log('  - Local time:', currentTimeLocal.toLocaleString());
-            console.log('  - Local timezone offset:', currentTimeLocal.getTimezoneOffset(), 'minutes from UTC');
-            console.log('  - IST time:', currentTimeIST.toLocaleString());
-            console.log('  - IST timezone: UTC+5:30 (330 minutes)');
-            
-            console.log('');
-            console.log('📋 FILE ANALYSIS:');
-            console.log('  - Filename:', filename);
-            console.log('  - File modified (raw timestamp):', fileLastModified);
-            console.log('  - File modified (local):', new Date(fileLastModified).toLocaleString());
-            console.log('  - File modified (IST):', convertToIST(new Date(fileLastModified)).toLocaleString());
             
             // Check if this is clearly a screenshot by filename
             const isNamedScreenshot = /screenshot/i.test(filename) || 
@@ -790,28 +777,15 @@
             // Check if this looks like a mobile browser temp file
             const isMobileTempFile = /^\d{1,12}\.(jpg|jpeg|png)$/i.test(filename);
             
-            console.log('');
-            console.log('🔍 FILENAME CLASSIFICATION:');
-            console.log('  - Is named screenshot:', isNamedScreenshot);
-            console.log('  - Is mobile temp file:', isMobileTempFile);
-            console.log('  - Filename length:', filename.length);
-            console.log('  - Contains "screenshot":', /screenshot/i.test(filename));
-            console.log('  - Numeric pattern match:', /^\d{1,12}\.(jpg|jpeg|png)$/i.test(filename));
-            
             let screenshotTime = null;
             let verificationMethod = '';
             let extractionDetails = {};
             
             // Handle named screenshots (desktop/some mobile apps)
             if (isNamedScreenshot) {
-                console.log('');
-                console.log('🖥️ PROCESSING NAMED SCREENSHOT:');
                 screenshotTime = parseScreenshotFilename(filename);
                 if (screenshotTime) {
-                    console.log('  - Extracted from filename (local):', screenshotTime.toLocaleString());
-                    // Convert parsed time to IST
                     screenshotTime = convertToIST(screenshotTime);
-                    console.log('  - Converted to IST:', screenshotTime.toLocaleString());
                     verificationMethod = 'filename_timestamp';
                     extractionDetails = {
                         source: 'filename',
@@ -819,30 +793,28 @@
                         convertedTime: screenshotTime
                     };
                 } else {
-                    console.log('  - ❌ Could not parse timestamp from filename');
                     return {
                         valid: false,
                         reason: 'Screenshot filename detected but timestamp could not be parsed.',
                         screenshotTime: null,
                         timeDiff: null,
-                        metadata: { filename, extractionDetails }
+                        method: 'failed_filename_parse'
                     };
                 }
             }
             
-            // Handle mobile temp files - try EXIF first, then file metadata
-            else if (isMobileTempFile && imageData) {
-                console.log('');
-                console.log('📱 PROCESSING MOBILE TEMP FILE:');
-                console.log('  - Attempting EXIF extraction...');
+            // Handle mobile temp files - be more permissive but secure
+            else if (isMobileTempFile) {
+                console.log('📱 Mobile temp file detected - trying multiple methods...');
                 
-                // Try to get actual image creation time from EXIF
-                const exifCreationTime = await extractImageCreationTime(imageData);
+                // Try EXIF first
+                let exifCreationTime = null;
+                if (imageData) {
+                    exifCreationTime = await extractImageCreationTime(imageData);
+                }
                 
                 if (exifCreationTime) {
-                    console.log('  - EXIF time found (local):', exifCreationTime.toLocaleString());
                     screenshotTime = convertToIST(exifCreationTime);
-                    console.log('  - EXIF time (IST):', screenshotTime.toLocaleString());
                     verificationMethod = 'exif_metadata';
                     extractionDetails = {
                         source: 'exif',
@@ -850,92 +822,98 @@
                         convertedTime: screenshotTime
                     };
                 } else {
-                    console.log('  - No EXIF data found, using file metadata...');
-                    // Fallback to file modification time
+                    // Fallback to file modification time (more permissive for mobile)
                     const fileTime = new Date(fileLastModified);
-                    console.log('  - File time (local):', fileTime.toLocaleString());
                     screenshotTime = convertToIST(fileTime);
-                    console.log('  - File time (IST):', screenshotTime.toLocaleString());
-                    verificationMethod = 'file_metadata';
+                    verificationMethod = 'file_metadata_mobile';
                     extractionDetails = {
                         source: 'file_metadata',
                         originalTime: fileTime,
-                        convertedTime: screenshotTime
+                        convertedTime: screenshotTime,
+                        note: 'Mobile browser upload - using file timestamp'
                     };
                 }
             }
             
             // Reject if no valid timestamp found
             else {
-                console.log('');
-                console.log('❌ REJECTION - FILE NOT RECOGNIZED:');
-                console.log('  - Not a named screenshot and not a mobile temp file');
-                console.log('  - Security policy: Only screenshots allowed');
                 return {
                     valid: false,
                     reason: 'File must be a screenshot with valid timestamp. Please take a fresh screenshot.',
                     screenshotTime: null,
                     timeDiff: null,
-                    metadata: { filename, isNamedScreenshot, isMobileTempFile }
+                    method: 'rejected_not_screenshot'
                 };
             }
             
             // Calculate time difference in IST
             const timeDiffMs = currentTimeIST.getTime() - screenshotTime.getTime();
             const timeDiffMinutes = timeDiffMs / (1000 * 60);
-            const timeDiffSeconds = timeDiffMs / 1000;
             
-            console.log('');
-            console.log('⏱️ TIME DIFFERENCE CALCULATION:');
-            console.log('  - Current time (IST):', currentTimeIST.toLocaleString());
-            console.log('  - Screenshot time (IST):', screenshotTime.toLocaleString());
-            console.log('  - Difference (milliseconds):', timeDiffMs);
-            console.log('  - Difference (seconds):', timeDiffSeconds.toFixed(1));
-            console.log('  - Difference (minutes):', timeDiffMinutes.toFixed(2));
-            console.log('  - Verification method:', verificationMethod);
+            // MOBILE-FRIENDLY VALIDATION: More generous for mobile uploads
+            let isValid = false;
+            let timeLimit = 2; // default 2 minutes
             
-            // STRICT IST VALIDATION: Must be within 2 minutes
-            const isValid = timeDiffMinutes >= -0.5 && timeDiffMinutes <= 2;
-            
-            console.log('');
-            console.log('✅ FINAL VALIDATION:');
-            console.log('  - Valid time range: -0.5 to +2.0 minutes');
-            console.log('  - Actual difference:', timeDiffMinutes.toFixed(2), 'minutes');
-            console.log('  - Validation result:', isValid ? 'PASSED' : 'FAILED');
-            console.log('=== END IST VERIFICATION ===');
+            if (verificationMethod === 'file_metadata_mobile') {
+                // More generous for mobile uploads using file metadata
+                timeLimit = 5; // 5 minutes for mobile
+                isValid = timeDiffMinutes >= -1 && timeDiffMinutes <= 5;
+            } else {
+                // Standard validation for named screenshots and EXIF data
+                isValid = timeDiffMinutes >= -0.5 && timeDiffMinutes <= 2;
+            }
             
             const result = {
                 valid: isValid,
-                reason: isValid ? `✅ Screenshot verified in IST timezone (${verificationMethod})` : 
+                reason: isValid ? `✅ Screenshot verified in IST (${verificationMethod}, ${timeLimit}min limit)` : 
                        timeDiffMinutes < -0.5 ? `Screenshot appears to be from the future (${Math.abs(Math.round(timeDiffMinutes * 10) / 10)} minutes ahead in IST)` :
-                       `🇮🇳 IST SECURITY: Screenshot is ${Math.round(timeDiffMinutes * 10) / 10} minutes old in Indian time. Please take a fresh screenshot.`,
+                       `🇮🇳 Screenshot is ${Math.round(timeDiffMinutes * 10) / 10} minutes old in IST. Limit: ${timeLimit} minutes for ${verificationMethod}.`,
                 screenshotTime: screenshotTime,
                 currentTime: currentTimeIST,
                 timeDiff: Math.round(timeDiffMinutes * 10) / 10,
-                timeDiffSeconds: Math.round(timeDiffSeconds * 10) / 10,
                 method: verificationMethod,
                 timezone: 'IST',
-                extractionDetails: extractionDetails,
-                metadata: {
-                    filename: filename,
-                    fileLastModified: fileLastModified,
-                    isNamedScreenshot: isNamedScreenshot,
-                    isMobileTempFile: isMobileTempFile,
-                    timezoneOffset: currentTimeLocal.getTimezoneOffset()
-                }
+                timeLimit: timeLimit,
+                extractionDetails: extractionDetails
             };
             
-            console.log('');
-            console.log('📊 COMPLETE VERIFICATION RESULT:', JSON.stringify(result, null, 2));
-            
+            console.log('Mobile-friendly verification result:', result);
             return result;
         }
         
         function showVerificationResult(verification, filename) {
             const verificationSection = document.getElementById('verificationSection');
+            const verificationDetails = document.getElementById('verificationDetails');
             
-            // Hide verification details - keep logic but don't show to user
-            verificationSection.style.display = 'none';
+            verificationSection.style.display = 'block';
+            
+            if (verification.valid) {
+                verificationSection.style.background = 'rgba(39, 174, 96, 0.1)';
+                verificationSection.style.borderColor = '#27ae60';
+                verificationDetails.style.color = '#155724';
+                
+                verificationDetails.innerHTML = `
+                    ✅ <strong>Verification Passed</strong><br>
+                    📁 File: ${filename}<br>
+                    🕐 Method: ${verification.method || 'unknown'}<br>
+                    ⏱️ Age: ${verification.timeDiff || 'unknown'} minutes<br>
+                    🇮🇳 IST: ${verification.screenshotTime ? verification.screenshotTime.toLocaleString() : 'unknown'}<br>
+                    ✓ ${verification.reason}
+                `;
+            } else {
+                verificationSection.style.background = 'rgba(231, 76, 60, 0.1)';
+                verificationSection.style.borderColor = '#e74c3c';
+                verificationDetails.style.color = '#721c24';
+                
+                verificationDetails.innerHTML = `
+                    ❌ <strong>Verification Failed</strong><br>
+                    📁 File: ${filename}<br>
+                    🕐 Method: ${verification.method || 'none'}<br>
+                    ⏱️ Age: ${verification.timeDiff || 'unknown'} minutes<br>
+                    🇮🇳 IST: ${verification.screenshotTime ? verification.screenshotTime.toLocaleString() : 'not found'}<br>
+                    ❌ ${verification.reason}
+                `;
+            }
         }
         
         // Extract RM number from text - EXACT from original working code
@@ -1272,7 +1250,7 @@
             // Reset processing state for new image
             resetProcessingState();
             
-            showStatus('🇮🇳 IST timezone validation: Screenshots within 2 minutes. Press F12 → Console for detailed metadata.', '');
+            showStatus('🇮🇳 IST timezone: 📱 Mobile screenshots: 5min limit | 💻 Desktop screenshots: 2min limit', '');
         }
 
         // Advanced image preprocessing - EXACT from original working code
@@ -1583,7 +1561,7 @@
         });
 
         // Initialize
-                    showStatus('🇮🇳 IST timezone validation: Screenshots within 2 minutes. Press F12 → Console for detailed metadata.', '');
+                    showStatus('🇮🇳 IST timezone: 📱 Mobile screenshots: 5min limit | 💻 Desktop screenshots: 2min limit', '');
         
         // Load saved settings or use original working URL
         const defaultUrl = 'https://script.google.com/macros/s/AKfycbyLOohLJUOMODwxOrhqDXUWLD9ThKJ86qE4969NqXhj6l7o1U1wY_0HrPW7LQMfYwZ4oQ/exec';
