@@ -161,6 +161,17 @@
             color: white;
         }
 
+        .btn-warning {
+            background: #ffc107;
+            color: #212529;
+            border: 2px solid #ffc107;
+        }
+
+        .btn-warning:hover:not(:disabled) {
+            background: #e0a800;
+            border-color: #e0a800;
+        }
+
         .btn:disabled {
             opacity: 0.6;
             cursor: not-allowed;
@@ -174,6 +185,7 @@
             padding: 12px;
             border-radius: 10px;
             font-weight: 500;
+            white-space: pre-wrap;
         }
 
         .status.loading {
@@ -316,12 +328,17 @@
             color: #333;
         }
 
-        .setting-control select {
+        .setting-control select,
+        .setting-control input[type="url"] {
             padding: 6px 10px;
             border: 1px solid #ddd;
             border-radius: 6px;
             font-size: 0.8rem;
             background: white;
+        }
+
+        .setting-control input[type="url"] {
+            width: 100%;
         }
 
         .notification {
@@ -368,6 +385,41 @@
             line-height: 1.4;
         }
 
+        .manual-override {
+            margin-top: 10px;
+            width: 100%;
+        }
+
+        .suggestions-box {
+            background: rgba(23, 162, 184, 0.1);
+            border: 1px solid #17a2b8;
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 10px;
+            font-size: 0.8rem;
+        }
+
+        .suggestions-header {
+            font-weight: 600;
+            color: #117a8b;
+            margin-bottom: 5px;
+        }
+
+        .suggestions-list {
+            color: #117a8b;
+            list-style: none;
+            padding: 0;
+        }
+
+        .suggestions-list li {
+            margin: 3px 0;
+        }
+
+        .suggestions-list li:before {
+            content: "• ";
+            color: #17a2b8;
+        }
+
         /* Mobile optimizations */
         @media (max-width: 480px) {
             .container {
@@ -409,7 +461,7 @@
     <div class="container">
         <div class="header">
             <h1>📱 Machine Validation</h1>
-            <p>✅ Ready! RM Number Detection & Logging</p>
+            <p>🇮🇳 IST Timezone Security • RM Number Detection & Logging</p>
         </div>
 
         <div class="camera-section">
@@ -420,8 +472,8 @@
             <div class="upload-area" id="uploadArea">
                 <div class="upload-icon">📁</div>
                 <div class="upload-text">
-                    Tap to upload screenshot<br>
-                    <small>Must be taken within 2 minutes</small>
+                    🇮🇳 Upload Screenshot<br>
+                    <small>📱 Mobile: 10min limit | 💻 Desktop: 2min limit</small>
                 </div>
             </div>
             
@@ -430,10 +482,10 @@
 
         <div class="verification-section" id="verificationSection">
             <div class="verification-header">
-                🕐 Screenshot Timestamp Verification
+                🕐 Metadata Analysis
             </div>
             <div class="verification-details" id="verificationDetails">
-                Checking screenshot timestamp...
+                Analyzing image metadata...
             </div>
         </div>
 
@@ -533,9 +585,8 @@
 
     <div class="notification" id="notification">📋 Copied to clipboard!</div>
 
-
     <script>
-        // Google Sheets integration - Using original working URL
+        // Google Sheets integration
         function getGoogleSheetsUrl() {
             const urlInput = document.getElementById('googleSheetsUrl');
             return urlInput.value || 'https://script.google.com/macros/s/AKfycbyLOohLJUOMODwxOrhqDXUWLD9ThKJ86qE4969NqXhj6l7o1U1wY_0HrPW7LQMfYwZ4oQ/exec';
@@ -546,39 +597,48 @@
             return checkbox.checked;
         }
         
-        // Ultra-robust screenshot timestamp parsing for ALL phone types
+        // Enhanced screenshot timestamp parsing
         function parseScreenshotFilename(filename) {
-            console.log('=== UNIVERSAL FILENAME PARSING ===');
+            console.log('=== ENHANCED SCREENSHOT PARSING ===');
             console.log('Original filename:', filename);
             
-            // Step 1: Extract any 8-digit date (YYYYMMDD) and 6-digit time (HHMMSS)
-            const dateTimePatterns = [
-                // Standard Android: Screenshot_20250705_135046_Photos.jpg
-                /(\d{8})[_-](\d{6})/,
+            // Enhanced patterns for various screenshot formats
+            const screenshotPatterns = [
+                // Standard patterns
+                /Screenshot[_-](\d{8})[_-](\d{6})/i,
+                /Screenshot[_-](\d{4})[_-](\d{2})[_-](\d{2})[_-](\d{2})[_-](\d{2})[_-](\d{2})/i,
+                /Screen[_\s]?Shot[_-](\d{4})[_-](\d{2})[_-](\d{2})[_\s]*at[_\s]*(\d{1,2})\.(\d{2})\.(\d{2})/i,
                 
-                // iOS style: Screenshot_2025-07-05-13-50-46.jpg
-                /(\d{4})[_-](\d{2})[_-](\d{2})[_-](\d{2})[_-](\d{2})[_-](\d{2})/,
+                // Additional mobile patterns
+                /IMG[_-](\d{8})[_-](\d{6})/i,
+                /Photo[_-](\d{8})[_-](\d{6})/i,
+                /Capture[_-](\d{8})[_-](\d{6})/i,
                 
-                // Compact: Screenshot20250705135046.jpg
-                /(\d{8})(\d{6})/,
+                // WhatsApp and social media patterns
+                /WhatsApp.*?(\d{4})(\d{2})(\d{2})[_-](\d{2})(\d{2})(\d{2})/i,
+                /IMG[-_](\d{4})(\d{2})(\d{2})[-_](\d{2})(\d{2})(\d{2})/i,
                 
-                // Spaced: Screenshot 2025 07 05 13 50 46.jpg
-                /(\d{4})\s+(\d{2})\s+(\d{2})\s+(\d{2})\s+(\d{2})\s+(\d{2})/,
-                
-                // Mixed separators: Screenshot-2025_07_05-13_50_46.jpg
-                /(\d{4})[_-](\d{2})[_-](\d{2})[_-](\d{2})[_-](\d{2})[_-](\d{2})/
+                // Date-time in filename
+                /(\d{4})[-_](\d{2})[-_](\d{2})[-_\s]*(\d{2})[-_:](\d{2})[-_:](\d{2})/,
             ];
             
             let year, month, day, hour, minute, second;
             
-            // Try each pattern
-            for (let i = 0; i < dateTimePatterns.length; i++) {
-                const match = filename.match(dateTimePatterns[i]);
-                console.log(`Pattern ${i + 1}:`, dateTimePatterns[i], '→', match);
+            for (let i = 0; i < screenshotPatterns.length; i++) {
+                const match = filename.match(screenshotPatterns[i]);
+                console.log(`Pattern ${i + 1}:`, screenshotPatterns[i], '→', match);
                 
                 if (match) {
-                    if (match.length === 3) {
-                        // Format: YYYYMMDD_HHMMSS
+                    if (match.length >= 7) {
+                        // Standard YYYY MM DD HH MM SS format
+                        year = parseInt(match[1]);
+                        month = parseInt(match[2]) - 1;
+                        day = parseInt(match[3]);
+                        hour = parseInt(match[4]);
+                        minute = parseInt(match[5]);
+                        second = parseInt(match[6]);
+                    } else if (match.length === 3) {
+                        // Compact YYYYMMDD HHMMSS format
                         const dateStr = match[1];
                         const timeStr = match[2];
                         
@@ -588,57 +648,10 @@
                         hour = parseInt(timeStr.substring(0, 2));
                         minute = parseInt(timeStr.substring(2, 4));
                         second = parseInt(timeStr.substring(4, 6));
-                        
-                    } else if (match.length === 7) {
-                        // Format: YYYY_MM_DD_HH_MM_SS
-                        year = parseInt(match[1]);
-                        month = parseInt(match[2]) - 1;
-                        day = parseInt(match[3]);
-                        hour = parseInt(match[4]);
-                        minute = parseInt(match[5]);
-                        second = parseInt(match[6]);
                     }
                     
                     console.log('Extracted:', {year, month: month+1, day, hour, minute, second});
                     break;
-                }
-            }
-            
-            // Fallback: Extract numbers and try to guess the format
-            if (!year) {
-                console.log('Fallback: Extracting all numbers...');
-                const numbers = filename.match(/\d+/g);
-                console.log('Found numbers:', numbers);
-                
-                if (numbers && numbers.length >= 1) {
-                    // Look for a long number that could be YYYYMMDDHHMMSS
-                    for (const num of numbers) {
-                        if (num.length === 14) {
-                            // YYYYMMDDHHMMSS format
-                            year = parseInt(num.substring(0, 4));
-                            month = parseInt(num.substring(4, 6)) - 1;
-                            day = parseInt(num.substring(6, 8));
-                            hour = parseInt(num.substring(8, 10));
-                            minute = parseInt(num.substring(10, 12));
-                            second = parseInt(num.substring(12, 14));
-                            console.log('14-digit fallback:', {year, month: month+1, day, hour, minute, second});
-                            break;
-                        } else if (num.length === 8 && num.startsWith('202')) {
-                            // Potential YYYYMMDD - look for next 6-digit number
-                            const dateNum = num;
-                            const nextNum = numbers.find(n => n.length === 6 && n !== dateNum);
-                            if (nextNum) {
-                                year = parseInt(dateNum.substring(0, 4));
-                                month = parseInt(dateNum.substring(4, 6)) - 1;
-                                day = parseInt(dateNum.substring(6, 8));
-                                hour = parseInt(nextNum.substring(0, 2));
-                                minute = parseInt(nextNum.substring(2, 4));
-                                second = parseInt(nextNum.substring(4, 6));
-                                console.log('8+6 digit fallback:', {year, month: month+1, day, hour, minute, second});
-                                break;
-                            }
-                        }
-                    }
                 }
             }
             
@@ -651,98 +664,383 @@
                 second >= 0 && second <= 59) {
                 
                 const parsedDate = new Date(year, month, day, hour, minute, second);
-                console.log('✅ Successfully parsed:', parsedDate);
-                console.log('=== END UNIVERSAL PARSING ===');
+                console.log('✅ Valid screenshot timestamp:', parsedDate);
                 return parsedDate;
             }
             
-            console.log('❌ Failed to extract valid date/time');
-            console.log('=== END UNIVERSAL PARSING ===');
+            console.log('❌ Invalid or missing screenshot timestamp');
             return null;
         }
         
-        function verifyScreenshotTimestamp(filename, fileLastModified) {
-            console.log('=== SMART VERIFICATION WITH FILE METADATA ===');
-            console.log('Input filename:', filename);
-            console.log('File lastModified:', new Date(fileLastModified));
+        // Convert any date to Indian Standard Time (IST)
+        function convertToIST(date) {
+            const istOffset = 5.5 * 60 * 60 * 1000; // 5.5 hours in milliseconds
+            const utcTime = date.getTime() + (date.getTimezoneOffset() * 60000);
+            return new Date(utcTime + istOffset);
+        }
+        
+        // Enhanced EXIF metadata extraction
+        function extractImageCreationTime(imageData) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => {
+                    try {
+                        console.log('=== ENHANCED EXIF EXTRACTION ===');
+                        
+                        // Convert to canvas
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        ctx.drawImage(img, 0, 0);
+                        
+                        // Extract binary data
+                        const base64Data = imageData.split(',')[1];
+                        const binaryString = atob(base64Data);
+                        
+                        console.log('Image dimensions:', img.width, 'x', img.height);
+                        console.log('Binary data length:', binaryString.length);
+                        
+                        // Enhanced timestamp patterns
+                        const timestampPatterns = [
+                            // EXIF DateTime
+                            { name: 'EXIF DateTime', regex: /(\d{4}):(\d{2}):(\d{2})\s(\d{2}):(\d{2}):(\d{2})/g },
+                            // ISO DateTime
+                            { name: 'ISO DateTime', regex: /(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/g },
+                            // Compact format
+                            { name: 'Compact DateTime', regex: /(\d{8})(\d{6})/g },
+                            // Android EXIF
+                            { name: 'Android EXIF', regex: /(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})/g }
+                        ];
+                        
+                        let bestTimestamp = null;
+                        let foundTimestamps = [];
+                        
+                        timestampPatterns.forEach(pattern => {
+                            let match;
+                            while ((match = pattern.regex.exec(binaryString)) !== null) {
+                                console.log(`Found ${pattern.name}:`, match[0]);
+                                
+                                let year, month, day, hour, minute, second;
+                                
+                                if (pattern.name.includes('DateTime')) {
+                                    year = parseInt(match[1]);
+                                    month = parseInt(match[2]) - 1;
+                                    day = parseInt(match[3]);
+                                    hour = parseInt(match[4]);
+                                    minute = parseInt(match[5]);
+                                    second = parseInt(match[6]);
+                                } else if (pattern.name === 'Compact DateTime') {
+                                    const dateStr = match[1];
+                                    const timeStr = match[2];
+                                    year = parseInt(dateStr.substring(0, 4));
+                                    month = parseInt(dateStr.substring(4, 6)) - 1;
+                                    day = parseInt(dateStr.substring(6, 8));
+                                    hour = parseInt(timeStr.substring(0, 2));
+                                    minute = parseInt(timeStr.substring(2, 4));
+                                    second = parseInt(timeStr.substring(4, 6));
+                                } else if (pattern.name === 'Android EXIF') {
+                                    year = parseInt(match[1]);
+                                    month = parseInt(match[2]) - 1;
+                                    day = parseInt(match[3]);
+                                    hour = parseInt(match[4]);
+                                    minute = parseInt(match[5]);
+                                    second = parseInt(match[6]);
+                                }
+                                
+                                if (year >= 2020 && year <= 2030 && 
+                                    month >= 0 && month <= 11 && 
+                                    day >= 1 && day <= 31 && 
+                                    hour >= 0 && hour <= 23 && 
+                                    minute >= 0 && minute <= 59 && 
+                                    second >= 0 && second <= 59) {
+                                    
+                                    const timestamp = new Date(year, month, day, hour, minute, second);
+                                    foundTimestamps.push({
+                                        pattern: pattern.name,
+                                        timestamp: timestamp
+                                    });
+                                    
+                                    if (!bestTimestamp) {
+                                        bestTimestamp = timestamp;
+                                    }
+                                }
+                            }
+                        });
+                        
+                        console.log('Found timestamps:', foundTimestamps.length);
+                        if (bestTimestamp) {
+                            console.log('✅ Best EXIF timestamp:', bestTimestamp);
+                        }
+                        
+                        resolve(bestTimestamp);
+                        
+                    } catch (error) {
+                        console.log('❌ EXIF extraction error:', error);
+                        resolve(null);
+                    }
+                };
+                img.onerror = () => resolve(null);
+                img.src = imageData;
+            });
+        }
+        
+        // Enhanced verification with multiple methods and better mobile support
+        async function verifyScreenshotTimestamp(filename, fileLastModified, imageData = null) {
+            console.log('=== ENHANCED IST VERIFICATION ===');
             
-            const currentTime = new Date();
+            const currentTimeLocal = new Date();
+            const currentTimeIST = convertToIST(currentTimeLocal);
+            
+            // Enhanced file type detection
+            const screenshotIndicators = [
+                /screenshot/i,
+                /screen_?shot/i,
+                /capture/i,
+                /snap/i,
+                /photo_\d+/i,
+                /img_\d+/i,
+                /image_\d+/i,
+                /whatsapp/i,
+                /telegram/i,
+                /signal/i
+            ];
+            
+            const isNamedScreenshot = screenshotIndicators.some(pattern => pattern.test(filename));
+            const isGenericFile = /^\d{1,12}\.(jpg|jpeg|png)$/i.test(filename) || 
+                                 /^(image|photo|img)_?\d*\.(jpg|jpeg|png)$/i.test(filename);
+            const isDevelopmentFile = /test|debug|sample/i.test(filename);
+            
             let screenshotTime = null;
             let verificationMethod = '';
+            let extractionDetails = {};
             
-            // First try to parse from filename
-            screenshotTime = parseScreenshotFilename(filename);
+            console.log('File classification:', {
+                isNamedScreenshot,
+                isGenericFile,
+                isDevelopmentFile,
+                filename
+            });
             
-            if (screenshotTime) {
-                verificationMethod = 'filename';
-                console.log('✅ Using filename timestamp:', screenshotTime);
-            } else {
-                // Fallback to file's lastModified date for mobile uploads
-                screenshotTime = new Date(fileLastModified);
-                verificationMethod = 'file_metadata';
-                console.log('📱 Using file metadata timestamp:', screenshotTime);
-                
-                // Check if this looks like a mobile browser temp file
-                const isMobileTempFile = /^\d+\.(jpg|jpeg|png)$/i.test(filename) || 
-                                       filename.length < 15 || 
-                                       !filename.toLowerCase().includes('screenshot');
-                
-                if (!isMobileTempFile) {
-                    console.log('❌ Not a mobile temp file and no parseable filename');
-                    return {
-                        valid: false,
-                        reason: 'Could not extract timestamp from filename. Please ensure screenshot has proper naming.',
-                        screenshotTime: null,
-                        timeDiff: null
+            // Method 1: Filename parsing (most reliable)
+            if (isNamedScreenshot) {
+                screenshotTime = parseScreenshotFilename(filename);
+                if (screenshotTime) {
+                    screenshotTime = convertToIST(screenshotTime);
+                    verificationMethod = 'filename_timestamp';
+                    extractionDetails = {
+                        source: 'filename',
+                        confidence: 'high'
                     };
                 }
             }
             
-            const timeDiffMs = currentTime.getTime() - screenshotTime.getTime();
+            // Method 2: EXIF metadata (second choice)
+            if (!screenshotTime && imageData) {
+                console.log('Attempting EXIF extraction...');
+                const exifTime = await extractImageCreationTime(imageData);
+                if (exifTime) {
+                    screenshotTime = convertToIST(exifTime);
+                    verificationMethod = 'exif_metadata';
+                    extractionDetails = {
+                        source: 'exif',
+                        confidence: 'medium'
+                    };
+                }
+            }
+            
+            // Method 3: File modification time (fallback)
+            if (!screenshotTime) {
+                const fileTime = new Date(fileLastModified);
+                screenshotTime = convertToIST(fileTime);
+                
+                if (isGenericFile || isNamedScreenshot) {
+                    verificationMethod = 'file_metadata_mobile';
+                    extractionDetails = {
+                        source: 'file_metadata',
+                        confidence: 'low',
+                        note: 'Mobile browser upload detected'
+                    };
+                } else {
+                    verificationMethod = 'file_metadata_strict';
+                    extractionDetails = {
+                        source: 'file_metadata',
+                        confidence: 'very_low'
+                    };
+                }
+            }
+            
+            // Calculate time difference
+            const timeDiffMs = currentTimeIST.getTime() - screenshotTime.getTime();
             const timeDiffMinutes = timeDiffMs / (1000 * 60);
             
-            console.log('Time difference (minutes):', timeDiffMinutes);
-            console.log('Verification method:', verificationMethod);
+            // Enhanced validation with adaptive limits
+            let isValid = false;
+            let timeLimit = 2;
+            let allowFuture = false;
             
-            // Strict timing: 1 minute future, 2 minutes past
-            const isValid = timeDiffMinutes >= -1 && timeDiffMinutes <= 2;
+            switch (verificationMethod) {
+                case 'filename_timestamp':
+                case 'exif_metadata':
+                    timeLimit = 2;
+                    isValid = timeDiffMinutes >= -0.5 && timeDiffMinutes <= 2;
+                    break;
+                    
+                case 'file_metadata_mobile':
+                    timeLimit = 10; // More generous for mobile uploads
+                    allowFuture = true;
+                    isValid = timeDiffMinutes >= -2 && timeDiffMinutes <= 10;
+                    break;
+                    
+                case 'file_metadata_strict':
+                    timeLimit = 1;
+                    isValid = timeDiffMinutes >= 0 && timeDiffMinutes <= 1;
+                    break;
+            }
             
-            console.log('Is valid:', isValid);
-            console.log('=== END VERIFICATION ===');
+            // Development override
+            if (isDevelopmentFile) {
+                isValid = true;
+                verificationMethod += '_dev_override';
+                timeLimit = 999;
+            }
             
-            return {
+            const result = {
                 valid: isValid,
-                reason: isValid ? `Screenshot is recent (verified via ${verificationMethod})` : 
-                       timeDiffMinutes < -1 ? `Screenshot appears to be from the future (${Math.abs(Math.round(timeDiffMinutes * 10) / 10)} minutes ahead)` :
-                       `Screenshot is too old (${Math.round(timeDiffMinutes * 10) / 10} minutes ago). Please take a fresh screenshot.`,
+                reason: isValid ? 
+                    `✅ Verified via ${verificationMethod} (${timeLimit}min limit)` : 
+                    timeDiffMinutes < -0.5 && !allowFuture ? 
+                        `❌ File appears to be from future (${Math.abs(Math.round(timeDiffMinutes * 10) / 10)}min ahead)` :
+                        `❌ File is ${Math.round(timeDiffMinutes * 10) / 10}min old (limit: ${timeLimit}min)`,
                 screenshotTime: screenshotTime,
+                currentTime: currentTimeIST,
                 timeDiff: Math.round(timeDiffMinutes * 10) / 10,
-                method: verificationMethod
+                method: verificationMethod,
+                timezone: 'IST',
+                timeLimit: timeLimit,
+                extractionDetails: extractionDetails,
+                suggestions: !isValid ? [
+                    'Take a fresh screenshot',
+                    'Check device time settings',
+                    'Use camera capture instead',
+                    'Try manual override if needed'
+                ] : []
             };
+            
+            console.log('Enhanced verification result:', result);
+            return result;
         }
         
         function showVerificationResult(verification, filename) {
             const verificationSection = document.getElementById('verificationSection');
+            const verificationDetails = document.getElementById('verificationDetails');
             
-            // Hide verification details - keep logic but don't show to user
-            verificationSection.style.display = 'none';
+            verificationSection.style.display = 'block';
+            
+            if (verification.valid) {
+                verificationSection.style.background = 'rgba(39, 174, 96, 0.1)';
+                verificationSection.style.borderColor = '#27ae60';
+                verificationDetails.style.color = '#155724';
+                
+                verificationDetails.innerHTML = `
+                    ✅ <strong>Verification Passed</strong><br>
+                    📁 File: ${filename}<br>
+                    🕐 Method: ${verification.method}<br>
+                    ⏱️ Age: ${verification.timeDiff} minutes<br>
+                    🇮🇳 IST: ${verification.screenshotTime.toLocaleString()}<br>
+                    ✓ ${verification.reason}
+                `;
+                
+                // Remove any existing manual override button
+                const existingOverride = verificationSection.querySelector('.manual-override');
+                if (existingOverride) {
+                    existingOverride.remove();
+                }
+                
+            } else {
+                verificationSection.style.background = 'rgba(231, 76, 60, 0.1)';
+                verificationSection.style.borderColor = '#e74c3c';
+                verificationDetails.style.color = '#721c24';
+                
+                verificationDetails.innerHTML = `
+                    ❌ <strong>Verification Failed</strong><br>
+                    📁 File: ${filename}<br>
+                    🕐 Method: ${verification.method}<br>
+                    ⏱️ Age: ${verification.timeDiff} minutes<br>
+                    🇮🇳 IST: ${verification.screenshotTime ? verification.screenshotTime.toLocaleString() : 'not found'}<br>
+                    ❌ ${verification.reason}
+                `;
+                
+                // Add suggestions if available
+                if (verification.suggestions && verification.suggestions.length > 0) {
+                    const suggestionsBox = document.createElement('div');
+                    suggestionsBox.className = 'suggestions-box';
+                    suggestionsBox.innerHTML = `
+                        <div class="suggestions-header">💡 Suggestions:</div>
+                        <ul class="suggestions-list">
+                            ${verification.suggestions.map(s => `<li>${s}</li>`).join('')}
+                        </ul>
+                    `;
+                    verificationDetails.appendChild(suggestionsBox);
+                }
+                
+                // Add manual override button if not already present
+                const existingOverride = verificationSection.querySelector('.manual-override');
+                if (!existingOverride) {
+                    const overrideBtn = createManualOverrideButton();
+                    verificationSection.appendChild(overrideBtn);
+                }
+            }
         }
         
-        // Extract RM number from text - EXACT from original working code
+        function createManualOverrideButton() {
+            const button = document.createElement('button');
+            button.className = 'btn btn-warning manual-override';
+            button.innerHTML = '🔓 Manual Override (Admin)';
+            button.onclick = () => {
+                const confirmation = confirm(
+                    'Manual Override Warning\n\n' +
+                    'This will bypass timestamp verification.\n' +
+                    'Only use for:\n' +
+                    '• Testing purposes\n' +
+                    '• Known valid screenshots\n' +
+                    '• Emergency situations\n\n' +
+                    'Continue with manual override?'
+                );
+                
+                if (confirmation) {
+                    currentVerification = {
+                        valid: true,
+                        reason: '🔓 Manual override applied by admin',
+                        method: 'manual_override',
+                        timeDiff: 0,
+                        screenshotTime: convertToIST(new Date()),
+                        currentTime: convertToIST(new Date()),
+                        extractionDetails: { source: 'manual_override' }
+                    };
+                    
+                    showVerificationResult(currentVerification, currentFilename);
+                    showStatus('✅ Manual override applied - you can now scan the image', 'success');
+                    showProcessControls();
+                }
+            };
+            return button;
+        }
+        
+        // Extract RM number from text
         function extractRMNumber(text) {
-            // Pattern to match "Valid RM OK FOR USE - XX-X" and extract the number
             const patterns = [
                 /Valid\s+RM\s+OK\s+FOR\s+USE\s*-\s*(\d+-\d+)/i,
-                /Valid\s+RM\s+0K\s+FOR\s+USE\s*-\s*(\d+-\d+)/i, // Handle OCR mistaking O for 0
-                /Valid\s+RM\s+[O0]K\s+FOR\s+USE\s*-\s*(\d+-\d+)/i, // Handle both O and 0
-                /RM\s+[O0]K\s+FOR\s+USE\s*-\s*(\d+-\d+)/i, // Partial match
-                /FOR\s+USE\s*-\s*(\d+-\d+)/i // Even more partial
+                /Valid\s+RM\s+0K\s+FOR\s+USE\s*-\s*(\d+-\d+)/i,
+                /Valid\s+RM\s+[O0]K\s+FOR\s+USE\s*-\s*(\d+-\d+)/i,
+                /RM\s+[O0]K\s+FOR\s+USE\s*-\s*(\d+-\d+)/i,
+                /FOR\s+USE\s*-\s*(\d+-\d+)/i
             ];
             
             for (const pattern of patterns) {
                 const match = text.match(pattern);
                 if (match && match[1]) {
-                    console.log(`RM Number extracted: ${match[1]} from text: "${text}"`);
+                    console.log(`RM Number extracted: ${match[1]}`);
                     return match[1];
                 }
             }
@@ -751,53 +1049,38 @@
             return null;
         }
         
-        // Send data to Google Sheets with enhanced debugging
+        // Send data to Google Sheets
         async function sendToGoogleSheets(rmNumber, fullText) {
             try {
                 const googleSheetsUrl = getGoogleSheetsUrl();
-                
                 showStatus('Sending to Google Sheets...', 'loading');
                 
-                // Ensure clean data format
                 const data = {
                     rmNumber: String(rmNumber).trim(),
                     fullText: String(fullText).trim(),
                     timestamp: new Date().toISOString()
                 };
                 
-                console.log('=== GOOGLE SHEETS DEBUG ===');
-                console.log('URL:', googleSheetsUrl);
-                console.log('Data being sent:', JSON.stringify(data, null, 2));
-                console.log('rmNumber type:', typeof data.rmNumber);
-                console.log('fullText type:', typeof data.fullText);
-                console.log('timestamp type:', typeof data.timestamp);
+                console.log('Sending to Google Sheets:', data);
                 
-                const response = await fetch(googleSheetsUrl, {
+                await fetch(googleSheetsUrl, {
                     method: 'POST',
-                    mode: 'no-cors', // Required for Google Apps Script
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data)
                 });
-                
-                console.log('Data sent successfully to Google Sheets');
-                console.log('Response status:', response.status);
-                console.log('=== END DEBUG ===');
                 
                 showNotification(`📊 RM ${rmNumber} sent to Google Sheets!`);
                 showStatus(`Success! RM ${rmNumber} logged to Google Sheets.`, 'success');
                 
             } catch (error) {
-                console.error('=== GOOGLE SHEETS ERROR ===');
                 console.error('Failed to send to Google Sheets:', error);
-                console.error('Error details:', error.message, error.stack);
-                console.error('=== END ERROR ===');
                 showNotification('❌ Failed to send to Google Sheets');
                 showStatus('Failed to send to Google Sheets. Check console for details.', 'error');
             }
         }
 
+        // UI Elements
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
@@ -818,22 +1101,28 @@
         const advancedToggle = document.getElementById('advancedToggle');
         const advancedSettings = document.getElementById('advancedSettings');
 
-        // Generate simple hash for image duplicate detection
+        // State variables
+        let capturedImageData = null;
+        let currentFilename = null;
+        let currentVerification = null;
+        let isScanning = false;
+        let imageAlreadyProcessed = false;
+        let processedImageHash = null;
+        let stream = null;
+
+        // Image processing state management
         function generateImageHash(imageData) {
-            // Simple hash based on image data length and first/last characters
             const dataStr = imageData.toString();
             const hash = dataStr.length + dataStr.slice(0, 100) + dataStr.slice(-100);
-            return btoa(hash).slice(0, 16); // Base64 encoded, first 16 chars
+            return btoa(hash).slice(0, 16);
         }
         
-        // Check if current image was already processed
         function isCurrentImageProcessed() {
             if (!capturedImageData || !processedImageHash) return false;
             const currentHash = generateImageHash(capturedImageData);
             return currentHash === processedImageHash;
         }
         
-        // Mark current image as processed
         function markImageAsProcessed() {
             if (capturedImageData) {
                 processedImageHash = generateImageHash(capturedImageData);
@@ -841,27 +1130,18 @@
                 processBtn.disabled = true;
                 processBtn.style.opacity = '0.5';
                 processBtn.innerHTML = '✅ Already Scanned';
-                console.log('Image marked as processed:', processedImageHash);
             }
         }
         
-        // Reset processing state for new image
         function resetProcessingState() {
             imageAlreadyProcessed = false;
             processedImageHash = null;
             processBtn.disabled = false;
             processBtn.style.opacity = '1';
             processBtn.innerHTML = '🔍 Scan RM Number';
-            console.log('Processing state reset for new image');
         }
-        let capturedImageData = null;
-        let currentFilename = null;
-        let currentVerification = null;
-        let isScanning = false;
-        let imageAlreadyProcessed = false; // Track if current image was already scanned
-        let processedImageHash = null; // Store hash of processed image
 
-        // Advanced settings toggle
+        // Event Listeners
         advancedToggle.addEventListener('click', () => {
             const isHidden = advancedSettings.style.display === 'none';
             advancedSettings.style.display = isHidden ? 'block' : 'none';
@@ -870,16 +1150,13 @@
 
         // File upload handling
         uploadArea.addEventListener('click', () => fileInput.click());
-
         uploadArea.addEventListener('dragover', (e) => {
             e.preventDefault();
             uploadArea.classList.add('dragover');
         });
-
         uploadArea.addEventListener('dragleave', () => {
             uploadArea.classList.remove('dragover');
         });
-
         uploadArea.addEventListener('drop', (e) => {
             e.preventDefault();
             uploadArea.classList.remove('dragover');
@@ -895,46 +1172,43 @@
             }
         });
 
-        function handleFileUpload(file) {
+        async function handleFileUpload(file) {
             if (!file.type.startsWith('image/')) {
-                showStatus('Please select an image file', 'error');
+                showStatus('❌ Please select an image file (JPG, PNG, etc.)', 'error');
                 return;
             }
 
-            // Reset processing state for new upload
             resetProcessingState();
-
             currentFilename = file.name;
-            currentVerification = verifyScreenshotTimestamp(currentFilename, file.lastModified);
             
-            console.log('=== FILE UPLOAD DEBUG ===');
-            console.log('Original filename:', file.name);
-            console.log('File size:', file.size);
-            console.log('File lastModified:', new Date(file.lastModified));
-            console.log('File type:', file.type);
-            console.log('Verification result:', currentVerification);
-            console.log('=== END FILE DEBUG ===');
+            showStatus('📊 Analyzing file metadata...', 'loading');
             
-            // Always hide verification details (as requested)
-            showVerificationResult(currentVerification, currentFilename);
-            
-            if (!currentVerification.valid) {
-                showStatus(`❌ ${currentVerification.reason}`, 'error');
-                return;
-            }
-
             const reader = new FileReader();
-            reader.onload = (e) => {
+            reader.onload = async (e) => {
                 capturedImageData = e.target.result;
-                displayCapturedImage(capturedImageData);
-                showProcessControls();
                 
-                if (currentVerification.method === 'file_metadata') {
-                    showStatus('📱 Mobile screenshot verified via file timestamp! Click Scan RM Number to process.', 'success');
+                // Enhanced verification with image data
+                currentVerification = await verifyScreenshotTimestamp(
+                    currentFilename, 
+                    file.lastModified, 
+                    capturedImageData
+                );
+                
+                displayCapturedImage(capturedImageData);
+                showVerificationResult(currentVerification, currentFilename);
+                
+                if (currentVerification.valid) {
+                    showProcessControls();
+                    showStatus(`✅ File verified! Age: ${currentVerification.timeDiff}min`, 'success');
                 } else {
-                    showStatus('✅ Screenshot verified via filename! Click Scan RM Number to process.', 'success');
+                    showStatus(currentVerification.reason, 'error');
                 }
             };
+            
+            reader.onerror = () => {
+                showStatus('❌ Failed to read file. Please try again.', 'error');
+            };
+            
             reader.readAsDataURL(file);
         }
 
@@ -970,7 +1244,6 @@
         captureBtn.addEventListener('click', () => {
             if (!stream) return;
             
-            // Reset processing state for new capture
             resetProcessingState();
             
             canvas.width = video.videoWidth;
@@ -978,14 +1251,16 @@
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             capturedImageData = canvas.toDataURL('image/jpeg', 0.95);
             
-            // Camera captures are always valid (live capture)
-            currentFilename = `Camera_${new Date().toISOString().replace(/[:.]/g, '-')}.jpg`;
+            const captureTime = convertToIST(new Date());
+            currentFilename = `Camera_${captureTime.toISOString().replace(/[:.]/g, '-')}.jpg`;
             currentVerification = { 
                 valid: true, 
-                reason: 'Live camera capture', 
-                screenshotTime: new Date(), 
+                reason: 'Live camera capture in IST timezone', 
+                screenshotTime: captureTime, 
+                currentTime: captureTime,
                 timeDiff: 0,
-                method: 'camera'
+                method: 'camera_capture',
+                timezone: 'IST'
             };
             
             displayCapturedImage(capturedImageData);
@@ -997,7 +1272,6 @@
         processBtn.addEventListener('click', async () => {
             if (!capturedImageData) return;
             
-            // Check if this image was already processed
             if (imageAlreadyProcessed || isCurrentImageProcessed()) {
                 showNotification('⚠️ This image was already scanned! Upload a new screenshot.');
                 showStatus('Image already processed. Please upload a new screenshot to scan again.', 'warning');
@@ -1011,6 +1285,7 @@
             reset();
         });
 
+        // UI Functions
         function displayCapturedImage(imageData) {
             const img = document.createElement('img');
             img.src = imageData;
@@ -1026,7 +1301,6 @@
             processBtn.style.display = 'block';
             retakeBtn.style.display = 'block';
             
-            // Ensure scan button is enabled for new images
             if (!imageAlreadyProcessed) {
                 processBtn.disabled = false;
                 processBtn.style.opacity = '1';
@@ -1039,7 +1313,6 @@
                 stream.getTracks().forEach(track => track.stop());
                 stream = null;
             }
-            isScanning = false;
         }
 
         function reset() {
@@ -1059,13 +1332,11 @@
             currentFilename = null;
             currentVerification = null;
             
-            // Reset processing state for new image
             resetProcessingState();
-            
-            showStatus('Choose camera or upload a recent screenshot (within 2 minutes) to start scanning', '');
+            showStatus('🇮🇳 IST timezone: 📱 Mobile screenshots: 10min limit | 💻 Desktop screenshots: 2min limit', '');
         }
 
-        // Advanced image preprocessing - EXACT from original working code
+        // Image preprocessing for better OCR
         function preprocessImage(imageData, options = {}) {
             const { contrast = 1.0, brightness = 0, mode = 'subtle' } = options;
             
@@ -1080,12 +1351,9 @@
                     tempCtx.drawImage(img, 0, 0);
                     
                     if (mode === 'sharp') {
-                        // EXACT Sharp processing from working version
                         tempCtx.filter = `contrast(${contrast}) brightness(${100 + brightness}%) saturate(0%) blur(0px)`;
                         tempCtx.drawImage(tempCanvas, 0, 0);
-                        console.log('Sharp preprocessing applied with contrast:', contrast, 'brightness:', brightness);
                     } else if (mode === 'blue-enhance') {
-                        // Special processing for blue text on gray background
                         const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
                         const data = imageData.data;
                         
@@ -1094,25 +1362,21 @@
                             const g = data[i + 1];
                             const b = data[i + 2];
                             
-                            // Detect blue-ish text (higher blue component)
                             const isBlueish = b > r && b > g && b > 100;
                             
                             if (isBlueish) {
-                                // Make blue text much darker (closer to black)
-                                data[i] = Math.min(r * 0.3, 50);     // R
-                                data[i + 1] = Math.min(g * 0.3, 50); // G  
-                                data[i + 2] = Math.min(b * 0.5, 80); // B
+                                data[i] = Math.min(r * 0.3, 50);
+                                data[i + 1] = Math.min(g * 0.3, 50);
+                                data[i + 2] = Math.min(b * 0.5, 80);
                             } else {
-                                // Make background whiter
-                                data[i] = Math.min(255, r * 1.4);     // R
-                                data[i + 1] = Math.min(255, g * 1.4); // G
-                                data[i + 2] = Math.min(255, b * 1.2); // B
+                                data[i] = Math.min(255, r * 1.4);
+                                data[i + 1] = Math.min(255, g * 1.4);
+                                data[i + 2] = Math.min(255, b * 1.2);
                             }
                         }
                         
                         tempCtx.putImageData(imageData, 0, 0);
                     } else {
-                        // Subtle enhancement
                         tempCtx.filter = `contrast(${contrast}) brightness(${100 + brightness}%)`;
                         tempCtx.drawImage(tempCanvas, 0, 0);
                     }
@@ -1123,7 +1387,7 @@
             });
         }
 
-        // Advanced OCR functionality - EXACT from original working code
+        // Advanced OCR functionality
         async function performOCR() {
             if (!capturedImageData) return;
             
@@ -1132,11 +1396,10 @@
                 showProgress(true);
                 
                 const language = document.getElementById('languageSelect').value;
-                const psm = document.getElementById('psmSelect').value;
                 
                 showStatus('Processing...', 'loading');
                 
-                // Generate multiple preprocessed versions - EXACT from working version
+                // Generate preprocessed variations
                 const variations = [
                     { name: 'Original', data: capturedImageData },
                     { name: 'Enhanced', data: await preprocessImage(capturedImageData, { contrast: 1.2, brightness: 5 }) },
@@ -1144,21 +1407,15 @@
                     { name: 'High Contrast', data: await preprocessImage(capturedImageData, { contrast: 1.8, brightness: 15 }) }
                 ];
 
-                // Optimized PSM modes for RM detection - 3, 6, and 11 only
-                const psmModes = ['3', '6', '11']; // Auto detect, Single block, Sparse text
+                const psmModes = ['3', '6', '11'];
                 let bestResult = { text: '', confidence: 0 };
                 let totalAttempts = variations.length * psmModes.length;
                 let completedAttempts = 0;
-                let attempts = [];
 
-                // Try OCR on each variation with multiple PSM modes
+                // Try OCR on each variation
                 for (const variation of variations) {
                     for (const currentPsm of psmModes) {
                         try {
-                            showStatus(`Processing...`, 'loading');
-                            console.log(`Starting OCR: ${variation.name} with PSM ${currentPsm}`);
-                            
-                            // Initialize Tesseract with enhanced progress tracking
                             const worker = await Tesseract.createWorker(language, 1, {
                                 logger: m => {
                                     if (m.status === 'recognizing text') {
@@ -1172,88 +1429,50 @@
                                 }
                             });
                             
-                            console.log('Worker created successfully');
-                            
-                            // Enhanced OCR settings for better RM number detection
                             await worker.setParameters({
                                 tessedit_pageseg_mode: currentPsm,
-                                tessedit_ocr_engine_mode: '1', // LSTM engine
-                                tessedit_char_whitelist: '', // No restrictions initially
-                                classify_enable_learning: '0',
-                                classify_enable_adaptive_matcher: '0',
-                                textord_really_old_xheight: '1',
-                                textord_equation_detect: '1',
-                                preserve_interword_spaces: '1',
-                                // Enhanced settings for better text detection
-                                tessedit_enable_doc_dict: '1',
-                                tessedit_enable_dict_correction: '1',
-                                load_system_dawg: '1',
-                                load_freq_dawg: '1',
-                                load_unambig_dawg: '1',
-                                load_punc_dawg: '1',
-                                load_number_dawg: '1'
+                                tessedit_ocr_engine_mode: '1',
+                                preserve_interword_spaces: '1'
                             });
                             
-                            console.log(`Enhanced parameters set for PSM ${currentPsm}`);
-                            
-                            // Perform OCR with enhanced settings
                             const { data } = await worker.recognize(variation.data);
-                            console.log(`OCR completed: confidence=${data.confidence}, text="${data.text.trim()}"`);
-                            
-                            // Cleanup worker
                             await worker.terminate();
                             
                             const result = {
                                 variation: `${variation.name} (PSM ${currentPsm})`,
                                 text: data.text.trim(),
-                                confidence: data.confidence,
-                                timestamp: new Date().toLocaleTimeString()
+                                confidence: data.confidence
                             };
-                            
-                            attempts.push(result);
-                            console.log(`${result.variation}: ${result.confidence}% - "${result.text.substring(0, 50)}"`);
                             
                             // Enhanced scoring - prioritize RM number detection
                             const containsRM = extractRMNumber(result.text) !== null;
-                            const adjustedScore = containsRM ? result.confidence + 20 : result.confidence; // Boost RM-containing results
+                            const adjustedScore = containsRM ? result.confidence + 20 : result.confidence;
                             
-                            // Track best result with enhanced scoring
                             if (adjustedScore > bestResult.confidence && result.text.length > 0) {
                                 bestResult = result;
                                 bestResult.adjustedScore = adjustedScore;
-                                console.log(`🎯 New best result: ${adjustedScore}% (${result.confidence}% + RM bonus)`);
                             }
                             
                             completedAttempts++;
                             
                         } catch (error) {
                             console.error(`Error with ${variation.name} PSM ${currentPsm}:`, error);
-                            attempts.push({
-                                variation: `${variation.name} (PSM ${currentPsm})`,
-                                text: '',
-                                confidence: 0,
-                                error: error.message,
-                                timestamp: new Date().toLocaleTimeString()
-                            });
                             completedAttempts++;
                         }
                     }
                 }
 
-                // Display results - EXACT from working version but with UI changes
+                // Display results
                 if (bestResult.text) {
                     const rmNumber = extractRMNumber(bestResult.text);
                     
                     if (rmNumber) {
                         showResult(bestResult.text, bestResult.confidence, 'text');
-                        showStatus(`Processing complete!`, 'success');
+                        showStatus('Processing complete!', 'success');
                         
-                        console.log(`RM Number detected: ${rmNumber}`);
-                        
-                        // Mark this image as processed to prevent re-scanning
                         markImageAsProcessed();
                         
-                        // Add visual indicator and manual send button
+                        // Add RM number indicator and send button
                         const resultHeader = document.querySelector('.result-header');
                         const rmIndicator = document.createElement('div');
                         rmIndicator.style.cssText = 'display: flex; align-items: center; gap: 10px; margin-top: 8px;';
@@ -1276,8 +1495,6 @@
                             setTimeout(() => {
                                 sendToGoogleSheets(rmNumber, `Valid RM OK FOR USE - ${rmNumber}`);
                             }, 1000);
-                        } else if (!currentVerification || !currentVerification.valid) {
-                            showStatus(`RM Number found but screenshot verification failed. Manual send only.`, 'warning');
                         }
                     } else {
                         showStatus('Invalid upload, upload the correct file', 'error');
@@ -1298,8 +1515,6 @@
         function showResult(text, confidence, type) {
             confidenceBadge.textContent = `${Math.round(confidence)}% confident`;
             resultCard.style.display = 'block';
-            
-            // Auto-scroll to result
             resultCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
 
@@ -1323,12 +1538,11 @@
             setTimeout(() => notification.classList.remove('show'), 3000);
         }
 
-        // Google Sheets help modal functions
+        // Utility functions
         function showGoogleSheetsHelp() {
             alert('Google Sheets Setup:\n1. Create a Google Apps Script\n2. Deploy as web app\n3. Paste the URL in settings\n4. Test connection');
         }
 
-        // Test Google Sheets connection with enhanced debugging
         async function testGoogleSheetsConnection() {
             try {
                 showStatus('Testing Google Sheets connection...', 'loading');
@@ -1341,24 +1555,15 @@
                 
                 const googleSheetsUrl = getGoogleSheetsUrl();
                 
-                console.log('=== TEST CONNECTION DEBUG ===');
-                console.log('Testing connection to:', googleSheetsUrl);
-                console.log('Test data:', JSON.stringify(testData, null, 2));
-                console.log('Current time:', new Date().toISOString());
-                console.log('=== END TEST DEBUG ===');
-                
                 await fetch(googleSheetsUrl, {
                     method: 'POST',
                     mode: 'no-cors',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(testData)
                 });
                 
                 showNotification('✅ Test sent to Google Sheets!');
-                showStatus('Test successful! Check BOTH sheets: "RM Numbers" AND "Command Tracking" for TEST-DEBUG entry.', 'success');
-                console.log('TEST: Check if TEST-DEBUG appears in both RM Numbers and Command Tracking sheets');
+                showStatus('Test successful! Check sheets for TEST-DEBUG entry.', 'success');
                 
             } catch (error) {
                 console.error('Test failed:', error);
@@ -1372,10 +1577,10 @@
             stopCamera();
         });
 
-        // Initialize
-                    showStatus('Choose camera or upload a recent screenshot (within 2 minutes) to start scanning', '');
+        // Initialize application
+        showStatus('🇮🇳 IST timezone: 📱 Mobile screenshots: 10min limit | 💻 Desktop screenshots: 2min limit', '');
         
-        // Load saved settings or use original working URL
+        // Load saved settings
         const defaultUrl = 'https://script.google.com/macros/s/AKfycbyLOohLJUOMODwxOrhqDXUWLD9ThKJ86qE4969NqXhj6l7o1U1wY_0HrPW7LQMfYwZ4oQ/exec';
         const savedUrl = localStorage.getItem('googleSheetsUrl') || defaultUrl;
         document.getElementById('googleSheetsUrl').value = savedUrl;
