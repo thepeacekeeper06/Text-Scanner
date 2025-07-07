@@ -409,7 +409,7 @@
     <div class="container">
         <div class="header">
             <h1>📱 Machine Validation</h1>
-            <p>✅ Ready! RM Number Detection & Logging</p>
+            <p>🇮🇳 IST Timezone Security • RM Number Detection & Logging</p>
         </div>
 
         <div class="camera-section">
@@ -420,8 +420,8 @@
             <div class="upload-area" id="uploadArea">
                 <div class="upload-icon">📁</div>
                 <div class="upload-text">
-                    📱💻 Upload Screenshot<br>
-                    <small>Mobile & Desktop supported (within 2-5 minutes)</small>
+                    🇮🇳 Upload Screenshot (IST Timezone)<br>
+                    <small>Must be taken within 2 minutes in Indian time</small>
                 </div>
             </div>
             
@@ -626,40 +626,161 @@
             return null;
         }
         
-        // EXIF metadata parser for mobile screenshot verification
-        function getImageCreationTime(imageData) {
+        // Convert any date to Indian Standard Time (IST)
+        function convertToIST(date) {
+            // IST is UTC+5:30
+            const istOffset = 5.5 * 60 * 60 * 1000; // 5.5 hours in milliseconds
+            const utcTime = date.getTime() + (date.getTimezoneOffset() * 60000);
+            return new Date(utcTime + istOffset);
+        }
+        
+        // Enhanced metadata extraction with detailed logging
+        function extractImageCreationTime(imageData) {
             return new Promise((resolve) => {
                 const img = new Image();
                 img.onload = () => {
-                    // Create canvas to read image data
-                    const canvas = document.createElement('canvas');
-                    const ctx = canvas.getContext('2d');
-                    canvas.width = img.width;
-                    canvas.height = img.height;
-                    ctx.drawImage(img, 0, 0);
-                    
-                    // Simple EXIF detection - look for EXIF markers in image data
                     try {
-                        const dataURL = canvas.toDataURL();
-                        // This is a simplified approach - in practice would need full EXIF parser
-                        // For now, return null to fall back to file metadata
-                        resolve(null);
+                        console.log('=== DETAILED IMAGE METADATA EXTRACTION ===');
+                        console.log('Image dimensions:', img.width, 'x', img.height);
+                        
+                        // Convert to canvas to read pixel data
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        ctx.drawImage(img, 0, 0);
+                        
+                        // Extract base64 data and convert to binary
+                        const base64Data = imageData.split(',')[1];
+                        const binaryString = atob(base64Data);
+                        
+                        console.log('Base64 data length:', base64Data.length);
+                        console.log('Binary data length:', binaryString.length);
+                        
+                        // Look for EXIF header
+                        const exifMarker = binaryString.indexOf('\xFF\xE1');
+                        console.log('EXIF marker position:', exifMarker);
+                        
+                        if (exifMarker === -1) {
+                            console.log('❌ No EXIF data found in image');
+                        } else {
+                            console.log('✅ EXIF data detected at position:', exifMarker);
+                        }
+                        
+                        // Search for various timestamp patterns in the binary data
+                        const timestampPatterns = [
+                            // Standard EXIF DateTime: YYYY:MM:DD HH:MM:SS
+                            { name: 'EXIF DateTime', regex: /(\d{4}):(\d{2}):(\d{2})\s(\d{2}):(\d{2}):(\d{2})/g },
+                            // Alternative formats
+                            { name: 'ISO DateTime', regex: /(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/g },
+                            { name: 'Compact DateTime', regex: /(\d{8})(\d{6})/g }
+                        ];
+                        
+                        let foundTimestamps = [];
+                        let bestTimestamp = null;
+                        
+                        timestampPatterns.forEach(pattern => {
+                            let match;
+                            while ((match = pattern.regex.exec(binaryString)) !== null) {
+                                console.log(`Found ${pattern.name}:`, match[0]);
+                                
+                                let year, month, day, hour, minute, second;
+                                
+                                if (pattern.name === 'EXIF DateTime' || pattern.name === 'ISO DateTime') {
+                                    year = parseInt(match[1]);
+                                    month = parseInt(match[2]) - 1; // JS months are 0-indexed
+                                    day = parseInt(match[3]);
+                                    hour = parseInt(match[4]);
+                                    minute = parseInt(match[5]);
+                                    second = parseInt(match[6]);
+                                } else if (pattern.name === 'Compact DateTime') {
+                                    const dateStr = match[1];
+                                    const timeStr = match[2];
+                                    year = parseInt(dateStr.substring(0, 4));
+                                    month = parseInt(dateStr.substring(4, 6)) - 1;
+                                    day = parseInt(dateStr.substring(6, 8));
+                                    hour = parseInt(timeStr.substring(0, 2));
+                                    minute = parseInt(timeStr.substring(2, 4));
+                                    second = parseInt(timeStr.substring(4, 6));
+                                }
+                                
+                                // Validate the extracted timestamp
+                                if (year >= 2020 && year <= 2030 && 
+                                    month >= 0 && month <= 11 && 
+                                    day >= 1 && day <= 31 && 
+                                    hour >= 0 && hour <= 23 && 
+                                    minute >= 0 && minute <= 59 && 
+                                    second >= 0 && second <= 59) {
+                                    
+                                    const timestamp = new Date(year, month, day, hour, minute, second);
+                                    foundTimestamps.push({
+                                        pattern: pattern.name,
+                                        raw: match[0],
+                                        parsed: timestamp,
+                                        components: { year, month: month + 1, day, hour, minute, second }
+                                    });
+                                    
+                                    console.log(`Valid ${pattern.name} timestamp:`, timestamp);
+                                    
+                                    // Use the first valid timestamp found (usually the most reliable)
+                                    if (!bestTimestamp) {
+                                        bestTimestamp = timestamp;
+                                    }
+                                }
+                            }
+                        });
+                        
+                        console.log('Total valid timestamps found:', foundTimestamps.length);
+                        foundTimestamps.forEach((ts, index) => {
+                            console.log(`Timestamp ${index + 1}:`, {
+                                pattern: ts.pattern,
+                                raw: ts.raw,
+                                parsed: ts.parsed.toLocaleString(),
+                                components: ts.components
+                            });
+                        });
+                        
+                        if (bestTimestamp) {
+                            console.log('✅ Best timestamp selected:', bestTimestamp);
+                        } else {
+                            console.log('❌ No valid timestamps found in image metadata');
+                        }
+                        
+                        console.log('=== END METADATA EXTRACTION ===');
+                        resolve(bestTimestamp);
+                        
                     } catch (error) {
-                        console.log('Could not read image metadata:', error);
+                        console.log('❌ Error extracting image metadata:', error);
                         resolve(null);
                     }
                 };
-                img.onerror = () => resolve(null);
+                img.onerror = () => {
+                    console.log('❌ Failed to load image for metadata extraction');
+                    resolve(null);
+                };
                 img.src = imageData;
             });
         }
         
         async function verifyScreenshotTimestamp(filename, fileLastModified, imageData = null) {
-            console.log('=== SMART MOBILE-FRIENDLY VERIFICATION ===');
-            console.log('Input filename:', filename);
-            console.log('File lastModified:', new Date(fileLastModified));
+            console.log('=== IST TIMEZONE SCREENSHOT VERIFICATION ===');
             
-            const currentTime = new Date();
+            // Get current time in IST
+            const currentTimeLocal = new Date();
+            const currentTimeIST = convertToIST(currentTimeLocal);
+            
+            console.log('🕐 CURRENT TIME ANALYSIS:');
+            console.log('  - Local time:', currentTimeLocal.toLocaleString());
+            console.log('  - Local timezone offset:', currentTimeLocal.getTimezoneOffset(), 'minutes from UTC');
+            console.log('  - IST time:', currentTimeIST.toLocaleString());
+            console.log('  - IST timezone: UTC+5:30 (330 minutes)');
+            
+            console.log('');
+            console.log('📋 FILE ANALYSIS:');
+            console.log('  - Filename:', filename);
+            console.log('  - File modified (raw timestamp):', fileLastModified);
+            console.log('  - File modified (local):', new Date(fileLastModified).toLocaleString());
+            console.log('  - File modified (IST):', convertToIST(new Date(fileLastModified)).toLocaleString());
             
             // Check if this is clearly a screenshot by filename
             const isNamedScreenshot = /screenshot/i.test(filename) || 
@@ -669,78 +790,145 @@
             // Check if this looks like a mobile browser temp file
             const isMobileTempFile = /^\d{1,12}\.(jpg|jpeg|png)$/i.test(filename);
             
-            console.log('Is named screenshot:', isNamedScreenshot);
-            console.log('Is mobile temp file:', isMobileTempFile);
+            console.log('');
+            console.log('🔍 FILENAME CLASSIFICATION:');
+            console.log('  - Is named screenshot:', isNamedScreenshot);
+            console.log('  - Is mobile temp file:', isMobileTempFile);
+            console.log('  - Filename length:', filename.length);
+            console.log('  - Contains "screenshot":', /screenshot/i.test(filename));
+            console.log('  - Numeric pattern match:', /^\d{1,12}\.(jpg|jpeg|png)$/i.test(filename));
+            
+            let screenshotTime = null;
+            let verificationMethod = '';
+            let extractionDetails = {};
             
             // Handle named screenshots (desktop/some mobile apps)
             if (isNamedScreenshot) {
-                const screenshotTime = parseScreenshotFilename(filename);
+                console.log('');
+                console.log('🖥️ PROCESSING NAMED SCREENSHOT:');
+                screenshotTime = parseScreenshotFilename(filename);
                 if (screenshotTime) {
-                    const timeDiffMs = currentTime.getTime() - screenshotTime.getTime();
-                    const timeDiffMinutes = timeDiffMs / (1000 * 60);
-                    
-                    console.log('Named screenshot age in minutes:', timeDiffMinutes);
-                    
-                    const isValid = timeDiffMinutes >= -0.5 && timeDiffMinutes <= 2;
-                    
-                    return {
-                        valid: isValid,
-                        reason: isValid ? '✅ Screenshot verified via filename timestamp' : 
-                               `Screenshot is ${Math.round(timeDiffMinutes * 10) / 10} minutes old. Please take a fresh screenshot.`,
-                        screenshotTime: screenshotTime,
-                        timeDiff: Math.round(timeDiffMinutes * 10) / 10,
-                        method: 'filename'
+                    console.log('  - Extracted from filename (local):', screenshotTime.toLocaleString());
+                    // Convert parsed time to IST
+                    screenshotTime = convertToIST(screenshotTime);
+                    console.log('  - Converted to IST:', screenshotTime.toLocaleString());
+                    verificationMethod = 'filename_timestamp';
+                    extractionDetails = {
+                        source: 'filename',
+                        originalTime: parseScreenshotFilename(filename),
+                        convertedTime: screenshotTime
                     };
                 } else {
+                    console.log('  - ❌ Could not parse timestamp from filename');
                     return {
                         valid: false,
                         reason: 'Screenshot filename detected but timestamp could not be parsed.',
                         screenshotTime: null,
-                        timeDiff: null
+                        timeDiff: null,
+                        metadata: { filename, extractionDetails }
                     };
                 }
             }
             
-            // Handle mobile temp files with enhanced validation
-            if (isMobileTempFile) {
-                console.log('📱 Mobile temp file detected - enhanced validation');
+            // Handle mobile temp files - try EXIF first, then file metadata
+            else if (isMobileTempFile && imageData) {
+                console.log('');
+                console.log('📱 PROCESSING MOBILE TEMP FILE:');
+                console.log('  - Attempting EXIF extraction...');
                 
-                // Use file metadata as creation time for mobile uploads
-                const fileCreationTime = new Date(fileLastModified);
-                const timeDiffMs = currentTime.getTime() - fileCreationTime.getTime();
-                const timeDiffMinutes = timeDiffMs / (1000 * 60);
+                // Try to get actual image creation time from EXIF
+                const exifCreationTime = await extractImageCreationTime(imageData);
                 
-                console.log('Mobile file age via metadata (minutes):', timeDiffMinutes);
-                
-                // For mobile uploads, allow 5-minute window but require very recent file modification
-                if (timeDiffMinutes <= 5 && timeDiffMinutes >= -0.5) {
-                    console.log('✅ Mobile upload passed timing validation');
-                    return {
-                        valid: true,
-                        reason: '📱 Mobile upload verified via file timestamp (recent)',
-                        screenshotTime: fileCreationTime,
-                        timeDiff: Math.round(timeDiffMinutes * 10) / 10,
-                        method: 'mobile_metadata'
+                if (exifCreationTime) {
+                    console.log('  - EXIF time found (local):', exifCreationTime.toLocaleString());
+                    screenshotTime = convertToIST(exifCreationTime);
+                    console.log('  - EXIF time (IST):', screenshotTime.toLocaleString());
+                    verificationMethod = 'exif_metadata';
+                    extractionDetails = {
+                        source: 'exif',
+                        originalTime: exifCreationTime,
+                        convertedTime: screenshotTime
                     };
                 } else {
-                    console.log('❌ Mobile file too old or invalid');
-                    return {
-                        valid: false,
-                        reason: `📱 Mobile file is ${Math.round(timeDiffMinutes * 10) / 10} minutes old. Please take a fresh screenshot and upload immediately.`,
-                        screenshotTime: fileCreationTime,
-                        timeDiff: Math.round(timeDiffMinutes * 10) / 10
+                    console.log('  - No EXIF data found, using file metadata...');
+                    // Fallback to file modification time
+                    const fileTime = new Date(fileLastModified);
+                    console.log('  - File time (local):', fileTime.toLocaleString());
+                    screenshotTime = convertToIST(fileTime);
+                    console.log('  - File time (IST):', screenshotTime.toLocaleString());
+                    verificationMethod = 'file_metadata';
+                    extractionDetails = {
+                        source: 'file_metadata',
+                        originalTime: fileTime,
+                        convertedTime: screenshotTime
                     };
                 }
             }
             
-            // Reject everything else
-            console.log('❌ File rejected - not a recognized screenshot format');
-            return {
-                valid: false,
-                reason: 'File must be a screenshot. Please take a screenshot (not a regular photo) and upload.',
-                screenshotTime: null,
-                timeDiff: null
+            // Reject if no valid timestamp found
+            else {
+                console.log('');
+                console.log('❌ REJECTION - FILE NOT RECOGNIZED:');
+                console.log('  - Not a named screenshot and not a mobile temp file');
+                console.log('  - Security policy: Only screenshots allowed');
+                return {
+                    valid: false,
+                    reason: 'File must be a screenshot with valid timestamp. Please take a fresh screenshot.',
+                    screenshotTime: null,
+                    timeDiff: null,
+                    metadata: { filename, isNamedScreenshot, isMobileTempFile }
+                };
+            }
+            
+            // Calculate time difference in IST
+            const timeDiffMs = currentTimeIST.getTime() - screenshotTime.getTime();
+            const timeDiffMinutes = timeDiffMs / (1000 * 60);
+            const timeDiffSeconds = timeDiffMs / 1000;
+            
+            console.log('');
+            console.log('⏱️ TIME DIFFERENCE CALCULATION:');
+            console.log('  - Current time (IST):', currentTimeIST.toLocaleString());
+            console.log('  - Screenshot time (IST):', screenshotTime.toLocaleString());
+            console.log('  - Difference (milliseconds):', timeDiffMs);
+            console.log('  - Difference (seconds):', timeDiffSeconds.toFixed(1));
+            console.log('  - Difference (minutes):', timeDiffMinutes.toFixed(2));
+            console.log('  - Verification method:', verificationMethod);
+            
+            // STRICT IST VALIDATION: Must be within 2 minutes
+            const isValid = timeDiffMinutes >= -0.5 && timeDiffMinutes <= 2;
+            
+            console.log('');
+            console.log('✅ FINAL VALIDATION:');
+            console.log('  - Valid time range: -0.5 to +2.0 minutes');
+            console.log('  - Actual difference:', timeDiffMinutes.toFixed(2), 'minutes');
+            console.log('  - Validation result:', isValid ? 'PASSED' : 'FAILED');
+            console.log('=== END IST VERIFICATION ===');
+            
+            const result = {
+                valid: isValid,
+                reason: isValid ? `✅ Screenshot verified in IST timezone (${verificationMethod})` : 
+                       timeDiffMinutes < -0.5 ? `Screenshot appears to be from the future (${Math.abs(Math.round(timeDiffMinutes * 10) / 10)} minutes ahead in IST)` :
+                       `🇮🇳 IST SECURITY: Screenshot is ${Math.round(timeDiffMinutes * 10) / 10} minutes old in Indian time. Please take a fresh screenshot.`,
+                screenshotTime: screenshotTime,
+                currentTime: currentTimeIST,
+                timeDiff: Math.round(timeDiffMinutes * 10) / 10,
+                timeDiffSeconds: Math.round(timeDiffSeconds * 10) / 10,
+                method: verificationMethod,
+                timezone: 'IST',
+                extractionDetails: extractionDetails,
+                metadata: {
+                    filename: filename,
+                    fileLastModified: fileLastModified,
+                    isNamedScreenshot: isNamedScreenshot,
+                    isMobileTempFile: isMobileTempFile,
+                    timezoneOffset: currentTimeLocal.getTimezoneOffset()
+                }
             };
+            
+            console.log('');
+            console.log('📊 COMPLETE VERIFICATION RESULT:', JSON.stringify(result, null, 2));
+            
+            return result;
         }
         
         function showVerificationResult(verification, filename) {
@@ -996,14 +1184,18 @@
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             capturedImageData = canvas.toDataURL('image/jpeg', 0.95);
             
-            // Camera captures are always valid (live capture)
-            currentFilename = `Camera_${new Date().toISOString().replace(/[:.]/g, '-')}.jpg`;
+            // Camera captures are always valid (live capture) - but timestamp in IST
+            const captureTime = new Date();
+            const captureTimeIST = convertToIST(captureTime);
+            currentFilename = `Camera_${captureTimeIST.toISOString().replace(/[:.]/g, '-')}.jpg`;
             currentVerification = { 
                 valid: true, 
-                reason: 'Live camera capture', 
-                screenshotTime: new Date(), 
+                reason: 'Live camera capture in IST timezone', 
+                screenshotTime: captureTimeIST, 
+                currentTime: captureTimeIST,
                 timeDiff: 0,
-                method: 'camera'
+                method: 'camera_capture',
+                timezone: 'IST'
             };
             
             displayCapturedImage(capturedImageData);
@@ -1080,7 +1272,7 @@
             // Reset processing state for new image
             resetProcessingState();
             
-            showStatus('📱 Mobile: Take screenshot & upload quickly. 💻 Desktop: Screenshots within 2 minutes.', '');
+            showStatus('🇮🇳 IST timezone validation: Screenshots within 2 minutes. Press F12 → Console for detailed metadata.', '');
         }
 
         // Advanced image preprocessing - EXACT from original working code
@@ -1391,7 +1583,7 @@
         });
 
         // Initialize
-                    showStatus('📱 Mobile: Take screenshot & upload quickly. 💻 Desktop: Screenshots within 2 minutes.', '');
+                    showStatus('🇮🇳 IST timezone validation: Screenshots within 2 minutes. Press F12 → Console for detailed metadata.', '');
         
         // Load saved settings or use original working URL
         const defaultUrl = 'https://script.google.com/macros/s/AKfycbyLOohLJUOMODwxOrhqDXUWLD9ThKJ86qE4969NqXhj6l7o1U1wY_0HrPW7LQMfYwZ4oQ/exec';
