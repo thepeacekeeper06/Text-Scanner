@@ -684,7 +684,7 @@
         // Google Sheets integration
         function getGoogleSheetsUrl() {
             const urlInput = document.getElementById('googleSheetsUrl');
-            return urlInput.value || 'https://script.google.com/macros/s/AKfycbx4OMH7Uvgek-qecoo0ew9vhwJK0frZAfOXJMdwZsj0WLYjdqg86YhAZR_iKOudR9WUpQ/exec';
+            return urlInput.value || 'https://script.google.com/macros/s/AKfycbyUz2N3TizOj9vTC75JbdVehlpGbJBj-09erI2HfAzOy4AxXBzkCKYEXaYhan7KVziDpA/exec';
         }
         
         function isAutoSendEnabled() {
@@ -1802,7 +1802,7 @@ Machines with status "No" will be blocked from RM scanning.`;
         showStatus('Upload a screenshot to start scanning for RM validation', '');
         
         // Load saved settings with user's URL as default
-        const defaultUrl = 'https://script.google.com/macros/s/AKfycbx4OMH7Uvgek-qecoo0ew9vhwJK0frZAfOXJMdwZsj0WLYjdqg86YhAZR_iKOudR9WUpQ/exec';
+        const defaultUrl = 'https://script.google.com/macros/s/AKfycbyUz2N3TizOj9vTC75JbdVehlpGbJBj-09erI2HfAzOy4AxXBzkCKYEXaYhan7KVziDpA/exec';
         document.getElementById('googleSheetsUrl').value = defaultUrl;
         
         // Save settings when changed (using variables instead of localStorage)
