@@ -16,7 +16,7 @@
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            padding: 10px;
+            padding: 10px 10px 80px 10px; /* Added bottom padding for footer */
             color: #333;
         }
 
@@ -396,58 +396,6 @@
             margin-top: 8px;
         }
 
-        .advanced-toggle {
-            text-align: center;
-            margin: 15px 0;
-        }
-
-        .toggle-btn {
-            background: none;
-            border: none;
-            color: #667eea;
-            font-size: 0.85rem;
-            cursor: pointer;
-            text-decoration: underline;
-        }
-
-        .advanced-settings {
-            background: rgba(240, 240, 240, 0.5);
-            border-radius: 12px;
-            padding: 15px;
-            margin: 15px 0;
-            display: none;
-        }
-
-        .setting-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 12px;
-        }
-
-        .setting-row:last-child {
-            margin-bottom: 0;
-        }
-
-        .setting-label {
-            font-size: 0.85rem;
-            font-weight: 500;
-            color: #333;
-        }
-
-        .setting-control select,
-        .setting-control input[type="url"] {
-            padding: 6px 10px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            font-size: 0.8rem;
-            background: white;
-        }
-
-        .setting-control input[type="url"] {
-            width: 100%;
-        }
-
         .notification {
             position: fixed;
             top: 20px;
@@ -525,6 +473,36 @@
             font-size: 0.85rem;
         }
 
+        /* Footer */
+        .footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+            padding: 8px 0;
+            text-align: center;
+            font-size: 0.75rem;
+            color: #666;
+            z-index: 1000;
+        }
+
+        .footer .company-name {
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .footer .location {
+            color: #888;
+        }
+
+        .footer .contact {
+            color: #667eea;
+            font-weight: 500;
+        }
+
         /* Mobile optimizations */
         @media (max-width: 480px) {
             .container {
@@ -548,13 +526,18 @@
             .machine-status-grid {
                 grid-template-columns: 1fr;
             }
+
+            .footer {
+                font-size: 0.7rem;
+                padding: 6px 0;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>📱 Machine Validation</h1>
+            <h1>Machine Validation</h1>
             <p>RM Number Detection & Logging</p>
         </div>
 
@@ -603,75 +586,16 @@
 
         <div class="status" id="status">Upload a screenshot to start scanning for RM validation</div>
 
-        <div class="advanced-toggle">
-            <button class="toggle-btn" id="advancedToggle">⚙️ Advanced Settings</button>
-        </div>
-
-        <div class="advanced-settings" id="advancedSettings">
-            <div class="setting-row">
-                <span class="setting-label">Language</span>
-                <div class="setting-control">
-                    <select id="languageSelect">
-                        <option value="eng">English</option>
-                        <option value="eng+fra">English + French</option>
-                        <option value="eng+spa">English + Spanish</option>
-                        <option value="chi_sim">Chinese</option>
-                        <option value="ara">Arabic</option>
-                    </select>
-                </div>
-            </div>
-            <div class="setting-row">
-                <span class="setting-label">Text Mode</span>
-                <div class="setting-control">
-                    <select id="psmSelect">
-                        <option value="3">Auto Detect</option>
-                        <option value="6">Single Block</option>
-                        <option value="7">Single Line</option>
-                        <option value="8">Single Word</option>
-                        <option value="13">Raw Line</option>
-                    </select>
-                </div>
-            </div>
-            <div class="setting-row">
-                <span class="setting-label">Processing</span>
-                <div class="setting-control">
-                    <small style="color: #666;">Multi-PSM (4 modes) + Image Enhancement</small>
-                </div>
-            </div>
-            <div class="setting-row">
-                <span class="setting-label">Google Apps Script URL</span>
-                <div class="setting-control">
-                    <input type="url" id="googleSheetsUrl" placeholder="Your Apps Script URL is configured" 
-                           style="width: 100%; padding: 6px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 0.8rem;">
-                    <div style="font-size: 0.7rem; color: #666; margin-top: 2px;">
-                        📖 <a href="#" onclick="showGoogleSheetsHelp()" style="color: #667eea; text-decoration: none;">Machine Status Setup</a>
-                    </div>
-                </div>
-            </div>
-            <div class="setting-row">
-                <span class="setting-label">Auto-Send RM Numbers</span>
-                <div class="setting-control">
-                    <label style="display: flex; align-items: center; gap: 5px; font-size: 0.8rem;">
-                        <input type="checkbox" id="autoSendCheckbox" checked style="margin: 0;">
-                        <span>Auto-send to Sheets</span>
-                    </label>
-                </div>
-            </div>
-            <div class="setting-row">
-                <span class="setting-label">Test Connection</span>
-                <div class="setting-control">
-                    <button onclick="testGoogleSheetsConnection()" 
-                            style="background: #27ae60; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; cursor: pointer;">
-                        🧪 Test Google Sheets
-                    </button>
-                </div>
-            </div>
-        </div>
-
         <div id="verificationInfo"></div>
     </div>
 
     <div class="notification" id="notification">✅ Processing complete!</div>
+
+    <!-- Footer -->
+    <div class="footer">
+        <div>Powered by <span class="company-name">KL Technology Solutions</span></div>
+        <div><span class="location">Attibele, Bangalore</span> | <span class="contact">📞 9900671351</span></div>
+    </div>
 
     <script>
         // Global machine status storage
@@ -681,26 +605,24 @@
         let consecutiveSuccesses = 0;
         let refreshTimer = null;
 
-        // Google Sheets integration
-        function getGoogleSheetsUrl() {
-            const urlInput = document.getElementById('googleSheetsUrl');
-            return urlInput.value || 'https://script.google.com/macros/s/AKfycbyUz2N3TizOj9vTC75JbdVehlpGbJBj-09erI2HfAzOy4AxXBzkCKYEXaYhan7KVziDpA/exec';
+        // Server integration
+        function getServerUrl() {
+            return 'https://script.google.com/macros/s/AKfycbyUz2N3TizOj9vTC75JbdVehlpGbJBj-09erI2HfAzOy4AxXBzkCKYEXaYhan7KVziDpA/exec';
         }
         
         function isAutoSendEnabled() {
-            const checkbox = document.getElementById('autoSendCheckbox');
-            return checkbox.checked;
+            return true; // Always auto-send
         }
 
-        // Fetch machine status from Google Apps Script or Sheets
+        // Fetch machine status from server
         async function fetchMachineStatus() {
             try {
                 showStatusLoading();
                 
-                const googleSheetsUrl = getGoogleSheetsUrl();
+                const serverUrl = getServerUrl();
                 
                 // Try Apps Script endpoint first
-                await tryAppsScriptStatus(googleSheetsUrl);
+                await tryAppsScriptStatus(serverUrl);
                 
             } catch (error) {
                 console.error('Failed to fetch machine status:', error);
@@ -751,13 +673,13 @@
         async function tryDirectSheetsAccess(url) {
             const sheetsId = getSheetsIdFromUrl(url);
             if (!sheetsId) {
-                throw new Error('Cannot read machine status - no Google Sheets ID found and no Apps Script endpoint');
+                throw new Error('Cannot read machine status - no server ID found and no Apps Script endpoint');
             }
             
             // Use Google Sheets CSV export URL for "Machine Status" sheet
             const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetsId}/gviz/tq?tqx=out:csv&sheet=Machine Status&headers=1&tq=SELECT A,B,C,D,E`;
             
-            console.log('Trying direct Sheets access:', csvUrl);
+            console.log('Trying direct server access:', csvUrl);
             
             const response = await fetch(csvUrl, {
                 method: 'GET',
@@ -765,7 +687,7 @@
             });
             
             if (!response.ok) {
-                throw new Error(`Sheets access failed HTTP ${response.status}. Create "Machine Status" sheet and make it publicly viewable.`);
+                throw new Error(`Server access failed HTTP ${response.status}. Create "Machine Status" sheet and make it publicly viewable.`);
             }
             
             const csvText = await response.text();
@@ -806,7 +728,7 @@
 
         // Extract Google Sheets ID from URL (updated)
         function getSheetsIdFromUrl(url = null) {
-            const targetUrl = url || getGoogleSheetsUrl();
+            const targetUrl = url || getServerUrl();
             
             // Skip if it's an Apps Script URL
             if (targetUrl.includes('script.google.com')) {
@@ -1285,18 +1207,18 @@
             return result;
         }
         
-        // Send data to Google Sheets (now checks machine status)
-        async function sendToGoogleSheets(rmNumber, fullText) {
+        // Send data to server (now checks machine status)
+        async function sendToServer(rmNumber, fullText) {
             try {
                 // Double-check machine status before sending
                 if (isMachineBlocked(rmNumber)) {
-                    showNotification(`🚫 Machine ${rmNumber} is BLOCKED - Cannot send to sheets`, 'error');
-                    showStatus(`Machine ${rmNumber} is blocked (status: "No"). RM not sent to sheets.`, 'blocked');
+                    showNotification(`🚫 Machine ${rmNumber} is BLOCKED - Cannot send to server`, 'error');
+                    showStatus(`Machine ${rmNumber} is blocked (status: "No"). RM not sent to server.`, 'blocked');
                     return false;
                 }
                 
-                const googleSheetsUrl = getGoogleSheetsUrl();
-                showStatus('Sending to Google Sheets...', 'loading');
+                const serverUrl = getServerUrl();
+                showStatus('Sending to server...', 'loading');
                 
                 const data = {
                     rmNumber: String(rmNumber).trim(),
@@ -1304,28 +1226,26 @@
                     timestamp: new Date().toISOString()
                 };
                 
-                console.log('Sending to Google Sheets:', data);
+                console.log('Sending to server:', data);
                 
-                await fetch(googleSheetsUrl, {
+                await fetch(serverUrl, {
                     method: 'POST',
                     mode: 'no-cors',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data)
                 });
                 
-                showNotification(`📊 RM ${rmNumber} sent to Google Sheets!`);
-                showStatus(`Success! RM ${rmNumber} logged to Google Sheets.`, 'success');
+                showNotification(`📊 RM ${rmNumber} sent to server!`);
+                showStatus(`Success! RM ${rmNumber} logged to server.`, 'success');
                 return true;
                 
             } catch (error) {
-                console.error('Failed to send to Google Sheets:', error);
-                showNotification('❌ Failed to send to Google Sheets', 'error');
-                showStatus('Failed to send to Google Sheets. Check console for details.', 'error');
+                console.error('Failed to send to server:', error);
+                showNotification('❌ Failed to send to server', 'error');
+                showStatus('Failed to send to server. Check console for details.', 'error');
                 return false;
             }
         }
-
-
 
         // UI Elements
         const processBtn = document.getElementById('processBtn');
@@ -1337,8 +1257,6 @@
         const notification = document.getElementById('notification');
         const fileInput = document.getElementById('fileInput');
         const uploadArea = document.getElementById('uploadArea');
-        const advancedToggle = document.getElementById('advancedToggle');
-        const advancedSettings = document.getElementById('advancedSettings');
         const verificationInfo = document.getElementById('verificationInfo');
 
         // State variables
@@ -1377,13 +1295,6 @@
             processBtn.innerHTML = '🔍 Scan RM Number';
             processBtn.classList.remove('blocked');
         }
-
-        // Event Listeners
-        advancedToggle.addEventListener('click', () => {
-            const isHidden = advancedSettings.style.display === 'none';
-            advancedSettings.style.display = isHidden ? 'block' : 'none';
-            advancedToggle.textContent = isHidden ? '🔼 Hide Settings' : '⚙️ Advanced Settings';
-        });
 
         // File upload handling
         uploadArea.addEventListener('click', () => fileInput.click());
@@ -1541,7 +1452,7 @@
                 processBtn.disabled = true;
                 showProgress(true);
                 
-                const language = document.getElementById('languageSelect').value;
+                const language = 'eng'; // Hardcoded to English
                 
                 showStatus('Processing...', 'loading');
                 
@@ -1631,18 +1542,10 @@
                         
                         markImageAsProcessed();
                         
-                        // Add send button to verification info
-                        const sendBtn = document.createElement('button');
-                        sendBtn.style.cssText = 'margin-top: 10px; background: #667eea; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-size: 0.8rem; cursor: pointer; display: block; margin-left: auto; margin-right: auto;';
-                        sendBtn.textContent = `📤 Send RM ${verification.rmNumber} to Sheets`;
-                        sendBtn.onclick = () => sendToGoogleSheets(verification.rmNumber, verification.fullMatch);
-                        
-                        verificationInfo.appendChild(sendBtn);
-                        
                         // Auto-send if enabled (and not blocked)
                         if (isAutoSendEnabled()) {
                             setTimeout(() => {
-                                sendToGoogleSheets(verification.rmNumber, verification.fullMatch);
+                                sendToServer(verification.rmNumber, verification.fullMatch);
                             }, 1000);
                         }
                     } else {
@@ -1660,8 +1563,6 @@
                 processBtn.disabled = false;
             }
         }
-
-
 
         function displayVerificationInfo(verification) {
             if (!verification) return;
@@ -1705,63 +1606,6 @@
             setTimeout(() => notification.classList.remove('show'), 3000);
         }
 
-        // Utility functions
-        function showGoogleSheetsHelp() {
-            const helpText = `Machine Status Setup:
-
-Your Apps Script URL is already configured for RM logging.
-
-For MACHINE STATUS BLOCKING feature:
-1. Open your Google Sheets
-2. Add a new tab named "Machine Status"
-3. Set up columns:
-   - Column A: Machine ID (e.g., "64-2", "51-1")  
-   - Column B: Current Status ("ok", "No", "Unknown")
-4. Make sheet publicly viewable:
-   - Share > Change to "Anyone with the link"
-   - Set to "Viewer"
-5. Replace the URL in settings with your Google Sheets URL
-
-Example Machine Status sheet:
-A1: Machine ID    B1: Current Status
-A2: 64-2         B2: ok
-A3: 51-1         B3: No
-A4: 78-3         B4: ok
-
-Machines with status "No" will be blocked from RM scanning.`;
-            
-            alert(helpText);
-        }
-
-        async function testGoogleSheetsConnection() {
-            try {
-                showStatus('Testing Google Sheets connection...', 'loading');
-                
-                const testData = {
-                    rmNumber: 'TEST-DEBUG',
-                    fullText: 'Valid RM OK FOR USE - (TEST-DEBUG) (15-07-25,02:47 PM)',
-                    timestamp: new Date().toISOString()
-                };
-                
-                const googleSheetsUrl = getGoogleSheetsUrl();
-                
-                await fetch(googleSheetsUrl, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(testData)
-                });
-                
-                showNotification('✅ Test sent to Google Sheets!');
-                showStatus('Test successful! Check sheets for TEST-DEBUG entry.', 'success');
-                
-            } catch (error) {
-                console.error('Test failed:', error);
-                showNotification('❌ Test failed', 'error');
-                showStatus('Test failed. Check console for details.', 'error');
-            }
-        }
-
         // Initialize machine status monitoring with adaptive refresh
         async function initializeMachineStatus() {
             console.log('Initializing machine status monitoring with adaptive refresh...');
@@ -1800,22 +1644,6 @@ Machines with status "No" will be blocked from RM scanning.`;
 
         // Initialize application
         showStatus('Upload a screenshot to start scanning for RM validation', '');
-        
-        // Load saved settings with user's URL as default
-        const defaultUrl = 'https://script.google.com/macros/s/AKfycbyUz2N3TizOj9vTC75JbdVehlpGbJBj-09erI2HfAzOy4AxXBzkCKYEXaYhan7KVziDpA/exec';
-        document.getElementById('googleSheetsUrl').value = defaultUrl;
-        
-        // Save settings when changed (using variables instead of localStorage)
-        let currentGoogleSheetsUrl = defaultUrl;
-        let currentAutoSendState = true;
-        
-        document.getElementById('googleSheetsUrl').addEventListener('input', (e) => {
-            currentGoogleSheetsUrl = e.target.value;
-        });
-        
-        document.getElementById('autoSendCheckbox').addEventListener('change', (e) => {
-            currentAutoSendState = e.target.checked;
-        });
 
         // Start machine status monitoring when page loads
         window.addEventListener('load', () => {
