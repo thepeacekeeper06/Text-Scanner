@@ -52,6 +52,126 @@
             font-size: 0.9rem;
         }
 
+        /* Machine Status Display */
+        .machine-status-section {
+            background: rgba(240, 245, 255, 0.8);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(102, 126, 234, 0.2);
+        }
+
+        .machine-status-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .machine-status-title {
+            font-weight: 600;
+            color: #333;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .connection-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #e74c3c;
+            display: inline-block;
+            margin-left: 5px;
+            transition: background 0.3s ease;
+        }
+
+        .connection-indicator.connected {
+            background: #27ae60;
+        }
+
+        .connection-indicator.connecting {
+            background: #f39c12;
+            animation: pulse-dot 1s infinite;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .refresh-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        .refresh-btn:hover {
+            background: #5a6fd8;
+        }
+
+        .machine-status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+            transition: opacity 0.2s ease;
+        }
+
+        .machine-status-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 10px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .machine-status-item.ok {
+            background: rgba(39, 174, 96, 0.1);
+            border: 1px solid rgba(39, 174, 96, 0.3);
+            color: #27ae60;
+        }
+
+        .machine-status-item.no {
+            background: rgba(231, 76, 60, 0.1);
+            border: 1px solid rgba(231, 76, 60, 0.3);
+            color: #e74c3c;
+        }
+
+        .machine-status-item.unknown {
+            background: rgba(255, 193, 7, 0.1);
+            border: 1px solid rgba(255, 193, 7, 0.3);
+            color: #f39c12;
+        }
+
+        .machine-id {
+            font-weight: 600;
+        }
+
+        .status-indicator {
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            border-radius: 10px;
+            text-transform: uppercase;
+        }
+
+        .status-loading {
+            color: #666;
+            font-style: italic;
+            text-align: center;
+            padding: 15px;
+        }
+
         .upload-section {
             text-align: center;
             margin-bottom: 20px;
@@ -136,6 +256,11 @@
             box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
         }
 
+        .btn-primary.blocked {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            box-shadow: 0 5px 15px rgba(231, 76, 60, 0.3);
+        }
+
         .btn-secondary {
             background: white;
             color: #667eea;
@@ -181,6 +306,12 @@
         .status.warning {
             background: rgba(255, 193, 7, 0.1);
             color: #ffc107;
+        }
+
+        .status.blocked {
+            background: rgba(231, 76, 60, 0.1);
+            color: #e74c3c;
+            border: 1px solid rgba(231, 76, 60, 0.3);
         }
 
         .progress-bar {
@@ -337,6 +468,14 @@
             transform: translateX(0);
         }
 
+        .notification.error {
+            background: #e74c3c;
+        }
+
+        .notification.warning {
+            background: #f39c12;
+        }
+
         .verification-info {
             background: rgba(39, 174, 96, 0.1);
             border: 1px solid rgba(39, 174, 96, 0.3);
@@ -351,6 +490,39 @@
             background: rgba(231, 76, 60, 0.1);
             border-color: rgba(231, 76, 60, 0.3);
             color: #e74c3c;
+        }
+
+        /* Machine status blocked warning */
+        .machine-blocked-warning {
+            background: rgba(231, 76, 60, 0.1);
+            border: 2px solid rgba(231, 76, 60, 0.4);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+            text-align: center;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { border-color: rgba(231, 76, 60, 0.4); }
+            50% { border-color: rgba(231, 76, 60, 0.8); }
+            100% { border-color: rgba(231, 76, 60, 0.4); }
+        }
+
+        .machine-blocked-warning .icon {
+            font-size: 2rem;
+            margin-bottom: 8px;
+        }
+
+        .machine-blocked-warning .title {
+            font-weight: 600;
+            color: #e74c3c;
+            margin-bottom: 5px;
+        }
+
+        .machine-blocked-warning .message {
+            color: #c0392b;
+            font-size: 0.85rem;
         }
 
         /* Mobile optimizations */
@@ -373,9 +545,8 @@
                 min-width: 100%;
             }
 
-            .result-text {
-                font-size: 0.85rem;
-                padding: 12px;
+            .machine-status-grid {
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -385,6 +556,22 @@
         <div class="header">
             <h1>📱 Machine Validation</h1>
             <p>RM Number Detection & Logging</p>
+        </div>
+
+        <!-- Machine Status Section -->
+        <div class="machine-status-section">
+            <div class="machine-status-header">
+                <span class="machine-status-title">
+                    🏭 Machine Status
+                    <span class="connection-indicator" id="connectionIndicator"></span>
+                </span>
+                <button class="refresh-btn" id="refreshStatusBtn" onclick="forceRefreshStatus()">
+                    🔄 Refresh
+                </button>
+            </div>
+            <div id="machineStatusDisplay" class="status-loading">
+                Connecting to machine status...
+            </div>
         </div>
 
         <div class="upload-section">
@@ -452,12 +639,12 @@
                 </div>
             </div>
             <div class="setting-row">
-                <span class="setting-label">Google Sheets URL</span>
+                <span class="setting-label">Google Apps Script URL</span>
                 <div class="setting-control">
-                    <input type="url" id="googleSheetsUrl" placeholder="✅ Your Google Sheets is already configured" 
+                    <input type="url" id="googleSheetsUrl" placeholder="Your Apps Script URL is configured" 
                            style="width: 100%; padding: 6px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 0.8rem;">
                     <div style="font-size: 0.7rem; color: #666; margin-top: 2px;">
-                        📖 <a href="#" onclick="showGoogleSheetsHelp()" style="color: #667eea; text-decoration: none;">Setup Instructions</a>
+                        📖 <a href="#" onclick="showGoogleSheetsHelp()" style="color: #667eea; text-decoration: none;">Machine Status Setup</a>
                     </div>
                 </div>
             </div>
@@ -481,20 +668,19 @@
             </div>
         </div>
 
-        <div class="result-card" id="resultCard" style="display: none;">
-            <div class="result-header">
-                <span class="result-type" id="resultType">OCR Result</span>
-                <span class="confidence-badge" id="confidenceBadge">0% confident</span>
-            </div>
-            <div class="result-text" id="resultText" onclick="copyToClipboard()"></div>
-            <div class="copy-hint">📋 Click text above to copy to clipboard</div>
-            <div id="verificationInfo"></div>
-        </div>
+        <div id="verificationInfo"></div>
     </div>
 
-    <div class="notification" id="notification">📋 Copied to clipboard!</div>
+    <div class="notification" id="notification">✅ Processing complete!</div>
 
     <script>
+        // Global machine status storage
+        let machineStatusData = {};
+        let lastStatusUpdate = null;
+        let refreshInterval = 3000; // Start with 3 seconds
+        let consecutiveSuccesses = 0;
+        let refreshTimer = null;
+
         // Google Sheets integration
         function getGoogleSheetsUrl() {
             const urlInput = document.getElementById('googleSheetsUrl');
@@ -504,6 +690,390 @@
         function isAutoSendEnabled() {
             const checkbox = document.getElementById('autoSendCheckbox');
             return checkbox.checked;
+        }
+
+        // Fetch machine status from Google Apps Script or Sheets
+        async function fetchMachineStatus() {
+            try {
+                showStatusLoading();
+                
+                const googleSheetsUrl = getGoogleSheetsUrl();
+                
+                // Try Apps Script endpoint first
+                await tryAppsScriptStatus(googleSheetsUrl);
+                
+            } catch (error) {
+                console.error('Failed to fetch machine status:', error);
+                showStatusError(`Connection error: ${error.message}`);
+                
+                // Don't clear existing machine status data on error
+                // Keep the data visible for user reference
+                consecutiveSuccesses = 0;
+            }
+        }
+
+        // Try to get machine status from Apps Script
+        async function tryAppsScriptStatus(baseUrl) {
+            try {
+                // Try the Apps Script with machine status parameter
+                const statusUrl = `${baseUrl}?action=get_machine_status&timestamp=${Date.now()}`;
+                
+                console.log('Trying Apps Script machine status:', statusUrl);
+                
+                const response = await fetch(statusUrl, {
+                    method: 'GET',
+                    mode: 'cors'
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Apps Script HTTP ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('Apps Script response:', data);
+                
+                if (data.status === 'success' && data.machines) {
+                    processMachineStatusData(data);
+                    consecutiveSuccesses++;
+                    adjustRefreshRate();
+                    return;
+                }
+                
+                throw new Error('No machine status endpoint available');
+                
+            } catch (error) {
+                console.log('Apps Script status failed:', error.message);
+                await tryDirectSheetsAccess(baseUrl);
+            }
+        }
+
+        // Try to read directly from Google Sheets
+        async function tryDirectSheetsAccess(url) {
+            const sheetsId = getSheetsIdFromUrl(url);
+            if (!sheetsId) {
+                throw new Error('Cannot read machine status - no Google Sheets ID found and no Apps Script endpoint');
+            }
+            
+            // Use Google Sheets CSV export URL for "Machine Status" sheet
+            const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetsId}/gviz/tq?tqx=out:csv&sheet=Machine Status&headers=1&tq=SELECT A,B,C,D,E`;
+            
+            console.log('Trying direct Sheets access:', csvUrl);
+            
+            const response = await fetch(csvUrl, {
+                method: 'GET',
+                mode: 'cors'
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Sheets access failed HTTP ${response.status}. Create "Machine Status" sheet and make it publicly viewable.`);
+            }
+            
+            const csvText = await response.text();
+            console.log('Received CSV data:', csvText.substring(0, 200) + '...');
+            
+            // Parse CSV data
+            const csvData = parseCSV(csvText);
+            processMachineStatusFromCSV(csvData);
+            consecutiveSuccesses++;
+            adjustRefreshRate();
+        }
+
+        // Adaptive refresh rate management
+        function adjustRefreshRate() {
+            const minInterval = 1000; // 1 second minimum
+            const maxInterval = 5000; // 5 seconds maximum
+            const baseInterval = 3000; // 3 seconds base
+            
+            if (consecutiveSuccesses >= 10) {
+                // After 10 successful fetches, slow down slightly
+                refreshInterval = Math.min(maxInterval, baseInterval + 1000);
+            } else if (consecutiveSuccesses >= 5) {
+                // After 5 successful fetches, use optimal rate
+                refreshInterval = baseInterval;
+            } else {
+                // For the first few fetches, go faster
+                refreshInterval = Math.max(minInterval, baseInterval - 1000);
+            }
+            
+            console.log(`Refresh rate adjusted: ${refreshInterval}ms (successes: ${consecutiveSuccesses})`);
+        }
+
+        // Reset refresh rate on errors
+        function resetRefreshRate() {
+            consecutiveSuccesses = 0;
+            refreshInterval = 3000; // Reset to base 3 seconds
+        }
+
+        // Extract Google Sheets ID from URL (updated)
+        function getSheetsIdFromUrl(url = null) {
+            const targetUrl = url || getGoogleSheetsUrl();
+            
+            // Skip if it's an Apps Script URL
+            if (targetUrl.includes('script.google.com')) {
+                return null;
+            }
+            
+            // Try to extract Sheets ID from various URL formats
+            const patterns = [
+                /\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/,
+                /key=([a-zA-Z0-9-_]+)/,
+                /id=([a-zA-Z0-9-_]+)/
+            ];
+            
+            for (const pattern of patterns) {
+                const match = targetUrl.match(pattern);
+                if (match) {
+                    console.log('Extracted Sheets ID:', match[1]);
+                    return match[1];
+                }
+            }
+            
+            return null;
+        }
+
+        // Simple CSV parser
+        function parseCSV(csvText) {
+            const lines = csvText.trim().split('\n');
+            const headers = lines[0].split(',').map(h => h.replace(/"/g, '').trim());
+            const data = [];
+            
+            for (let i = 1; i < lines.length; i++) {
+                const values = lines[i].split(',').map(v => v.replace(/"/g, '').trim());
+                if (values.length >= headers.length && values[0]) { // Skip empty rows
+                    const row = {};
+                    headers.forEach((header, index) => {
+                        row[header] = values[index] || '';
+                    });
+                    data.push(row);
+                }
+            }
+            
+            console.log('Parsed CSV data:', data);
+            return data;
+        }
+
+        // Process machine status from CSV data
+        function processMachineStatusFromCSV(csvData) {
+            machineStatusData = {};
+            
+            csvData.forEach(row => {
+                const machineId = row['Machine ID'] || row['machineId'] || row['Machine_ID'];
+                const currentStatus = row['Current Status'] || row['currentStatus'] || row['Current_Status'];
+                const pinState = row['Pin State'] || row['pinState'] || row['Pin_State'];
+                const lastUpdate = row['Last Update'] || row['lastUpdate'] || row['Last_Update'];
+                const cycles = row['Status Cycles'] || row['statusCycles'] || row['Status_Cycles'];
+                
+                if (machineId && machineId.trim() !== '') {
+                    machineStatusData[machineId.trim()] = {
+                        status: currentStatus || 'Unknown',
+                        pinState: pinState || 'Unknown',
+                        lastUpdate: lastUpdate,
+                        cycles: parseInt(cycles) || 0
+                    };
+                }
+            });
+            
+            console.log('Processed machine status data:', machineStatusData);
+            lastStatusUpdate = new Date();
+            displayMachineStatus();
+        }
+
+        // Process machine status data from Apps Script
+        function processMachineStatusData(data) {
+            machineStatusData = {};
+            
+            // Convert array to object for easy lookup
+            if (data.machines && Array.isArray(data.machines)) {
+                data.machines.forEach(machine => {
+                    machineStatusData[machine.machineId] = {
+                        status: machine.currentStatus || 'Unknown',
+                        pinState: machine.pinState || 'Unknown',
+                        lastUpdate: machine.lastUpdate,
+                        cycles: machine.statusCycles || 0
+                    };
+                });
+            }
+            
+            console.log('Processed machine status data:', machineStatusData);
+            lastStatusUpdate = new Date();
+            displayMachineStatus();
+        }
+
+        // Display machine status in the UI (smooth updates)
+        function displayMachineStatus() {
+            const display = document.getElementById('machineStatusDisplay');
+            const indicator = document.getElementById('connectionIndicator');
+            const section = document.querySelector('.machine-status-section');
+            
+            // Remove updating visual cues
+            if (section) section.classList.remove('updating');
+            
+            if (Object.keys(machineStatusData).length === 0) {
+                display.innerHTML = `
+                    <div style="color: #666; text-align: center; padding: 15px;">
+                        📊 No machine data available<br>
+                        <small style="color: #999;">Create "Machine Status" sheet or update Apps Script</small>
+                    </div>
+                `;
+                indicator.className = 'connection-indicator'; // Red/disconnected
+                return;
+            }
+            
+            // Create the grid HTML
+            const gridHtml = Object.entries(machineStatusData)
+                .sort(([a], [b]) => a.localeCompare(b))
+                .map(([machineId, data]) => {
+                    const statusClass = data.status.toLowerCase() === 'ok' ? 'ok' : 
+                                      data.status.toLowerCase() === 'no' ? 'no' : 'unknown';
+                    const statusIcon = statusClass === 'ok' ? '✅' : 
+                                     statusClass === 'no' ? '❌' : '⚠️';
+                    
+                    return `
+                        <div class="machine-status-item ${statusClass}">
+                            <span class="machine-id">${machineId}</span>
+                            <span class="status-indicator">${statusIcon} ${data.status}</span>
+                        </div>
+                    `;
+                }).join('');
+            
+            const updateTime = lastStatusUpdate ? 
+                `Updated: ${lastStatusUpdate.toLocaleTimeString()} (${refreshInterval/1000}s refresh)` : 
+                'Never updated';
+            
+            // Create the complete HTML
+            const newHtml = `
+                <div class="machine-status-grid">
+                    ${gridHtml}
+                </div>
+                <div style="text-align: center; margin-top: 10px; font-size: 0.7rem; color: #666;">
+                    ${updateTime}
+                </div>
+            `;
+            
+            // Only update if content has actually changed (prevents flickering)
+            if (display.innerHTML !== newHtml) {
+                display.innerHTML = newHtml;
+            }
+            
+            // Remove any updating class from the new grid
+            const newGrid = display.querySelector('.machine-status-grid');
+            if (newGrid) newGrid.classList.remove('updating');
+            
+            // Set connection indicator to green (connected)
+            indicator.className = 'connection-indicator connected';
+        }
+
+        // Force immediate refresh
+        async function forceRefreshStatus() {
+            console.log('Force refreshing machine status...');
+            resetRefreshRate(); // Reset to ensure immediate update
+            await fetchMachineStatus();
+            
+            // Restart the adaptive timer
+            if (refreshTimer) {
+                clearTimeout(refreshTimer);
+            }
+            initializeMachineStatus();
+        }
+
+        // Check if machine is blocked (status = "No")
+        function isMachineBlocked(rmNumber) {
+            const machineData = machineStatusData[rmNumber];
+            if (!machineData) {
+                console.log(`No status data for machine ${rmNumber} - allowing operation (no blocking data available)`);
+                return false;
+            }
+            
+            const isBlocked = machineData.status.toLowerCase() === 'no';
+            console.log(`Machine ${rmNumber} status: ${machineData.status} - ${isBlocked ? 'BLOCKED' : 'ALLOWED'}`);
+            return isBlocked;
+        }
+
+        // Show status loading (subtle visual feedback)
+        function showStatusLoading() {
+            const indicator = document.getElementById('connectionIndicator');
+            const section = document.querySelector('.machine-status-section');
+            const grid = document.querySelector('.machine-status-grid');
+            
+            // Show connecting indicator
+            indicator.className = 'connection-indicator connecting';
+            
+            // Add subtle visual feedback
+            if (section) section.classList.add('updating');
+            if (grid) grid.classList.add('updating');
+            
+            // If no data exists yet, show loading message
+            const display = document.getElementById('machineStatusDisplay');
+            if (Object.keys(machineStatusData).length === 0) {
+                display.innerHTML = '<div class="status-loading">🔄 Connecting to machine status...</div>';
+            } else {
+                // Keep existing data, just update the timestamp to show it's refreshing
+                const timestampDiv = display.querySelector('div[style*="text-align: center"]');
+                if (timestampDiv) {
+                    timestampDiv.innerHTML = `🔄 Updating... (${refreshInterval/1000}s refresh)`;
+                }
+            }
+        }
+
+        // Show status error (preserve existing data when possible)
+        function showStatusError(message) {
+            const display = document.getElementById('machineStatusDisplay');
+            const indicator = document.getElementById('connectionIndicator');
+            const section = document.querySelector('.machine-status-section');
+            const grid = document.querySelector('.machine-status-grid');
+            
+            // Remove updating visual cues
+            if (section) section.classList.remove('updating');
+            if (grid) grid.classList.remove('updating');
+            
+            // If we have existing data, keep it and just show error in status
+            if (Object.keys(machineStatusData).length > 0) {
+                // Keep existing machine data visible, just update the footer
+                const existingGrid = display.querySelector('.machine-status-grid');
+                if (existingGrid) {
+                    // Update only the timestamp area to show error
+                    const timestampDiv = display.querySelector('div[style*="text-align: center"]');
+                    if (timestampDiv) {
+                        timestampDiv.innerHTML = `
+                            <div style="color: #e74c3c; font-size: 0.7rem;">
+                                ❌ ${message}<br>
+                                <button onclick="initializeMachineStatus()" 
+                                        style="margin-top: 4px; background: #667eea; color: white; border: none; padding: 3px 8px; border-radius: 4px; font-size: 0.65rem; cursor: pointer;">
+                                    🔄 Retry
+                                </button>
+                            </div>
+                        `;
+                    }
+                    indicator.className = 'connection-indicator'; // Red/disconnected
+                    resetRefreshRate();
+                    return;
+                }
+            }
+            
+            // If no existing data, show full error message
+            display.innerHTML = `
+                <div style="color: #e74c3c; text-align: center; padding: 15px;">
+                    ❌ ${message}<br>
+                    <button onclick="initializeMachineStatus()" 
+                            style="margin-top: 8px; background: #667eea; color: white; border: none; padding: 4px 12px; border-radius: 6px; font-size: 0.75rem; cursor: pointer;">
+                        🔄 Retry Now
+                    </button>
+                </div>
+            `;
+            indicator.className = 'connection-indicator'; // Red/disconnected
+            resetRefreshRate();
+        }
+
+        // Show machine blocked warning
+        function showMachineBlockedWarning(rmNumber) {
+            const verificationInfo = document.getElementById('verificationInfo');
+            verificationInfo.innerHTML = `
+                <div class="machine-blocked-warning">
+                    <div class="icon">🚫</div>
+                    <div class="title">Machine ${rmNumber} is BLOCKED</div>
+                    <div class="message">Machine status is "No" - RM scanning blocked until status returns to "ok"</div>
+                </div>
+            `;
         }
         
         // Convert to Indian Standard Time (IST)
@@ -659,6 +1229,17 @@
             const { rmNumber, timestampStr, fullMatch } = rmData;
             const currentTimeIST = convertToIST(new Date());
             
+            // Check if machine is blocked FIRST
+            if (isMachineBlocked(rmNumber)) {
+                return {
+                    valid: false,
+                    blocked: true,
+                    reason: `🚫 Machine ${rmNumber} is BLOCKED (status: "No")`,
+                    rmNumber: rmNumber,
+                    timeDiff: null
+                };
+            }
+            
             // Parse the timestamp from the OCR text
             const ocrTimestamp = parseTimestamp(timestampStr);
             
@@ -687,6 +1268,7 @@
             
             const result = {
                 valid: isValid,
+                blocked: false,
                 reason: isValid ? 
                     `✅ Verified: RM ${rmNumber} within 2min limit (${Math.round(timeDiffMinutes * 10) / 10}min ago)` :
                     timeDiffMinutes < 0 ?
@@ -703,9 +1285,16 @@
             return result;
         }
         
-        // Send data to Google Sheets
+        // Send data to Google Sheets (now checks machine status)
         async function sendToGoogleSheets(rmNumber, fullText) {
             try {
+                // Double-check machine status before sending
+                if (isMachineBlocked(rmNumber)) {
+                    showNotification(`🚫 Machine ${rmNumber} is BLOCKED - Cannot send to sheets`, 'error');
+                    showStatus(`Machine ${rmNumber} is blocked (status: "No"). RM not sent to sheets.`, 'blocked');
+                    return false;
+                }
+                
                 const googleSheetsUrl = getGoogleSheetsUrl();
                 showStatus('Sending to Google Sheets...', 'loading');
                 
@@ -726,47 +1315,22 @@
                 
                 showNotification(`📊 RM ${rmNumber} sent to Google Sheets!`);
                 showStatus(`Success! RM ${rmNumber} logged to Google Sheets.`, 'success');
+                return true;
                 
             } catch (error) {
                 console.error('Failed to send to Google Sheets:', error);
-                showNotification('❌ Failed to send to Google Sheets');
+                showNotification('❌ Failed to send to Google Sheets', 'error');
                 showStatus('Failed to send to Google Sheets. Check console for details.', 'error');
+                return false;
             }
         }
 
-        // Copy to clipboard functionality
-        async function copyToClipboard() {
-            const resultText = document.getElementById('resultText');
-            const text = resultText.textContent;
-            
-            if (!text || text.trim() === '') {
-                showNotification('⚠️ No text to copy');
-                return;
-            }
-            
-            try {
-                await navigator.clipboard.writeText(text);
-                showNotification('📋 Text copied to clipboard!');
-            } catch (error) {
-                // Fallback for older browsers
-                const textArea = document.createElement('textarea');
-                textArea.value = text;
-                document.body.appendChild(textArea);
-                textArea.select();
-                document.execCommand('copy');
-                document.body.removeChild(textArea);
-                showNotification('📋 Text copied to clipboard!');
-            }
-        }
+
 
         // UI Elements
         const processBtn = document.getElementById('processBtn');
         const retakeBtn = document.getElementById('retakeBtn');
         const status = document.getElementById('status');
-        const resultCard = document.getElementById('resultCard');
-        const resultType = document.getElementById('resultType');
-        const confidenceBadge = document.getElementById('confidenceBadge');
-        const resultText = document.getElementById('resultText');
         const capturedImageContainer = document.getElementById('capturedImageContainer');
         const progressBar = document.getElementById('progressBar');
         const progressFill = document.getElementById('progressFill');
@@ -811,6 +1375,7 @@
             processBtn.disabled = false;
             processBtn.style.opacity = '1';
             processBtn.innerHTML = '🔍 Scan RM Number';
+            processBtn.classList.remove('blocked');
         }
 
         // Event Listeners
@@ -872,7 +1437,7 @@
             if (!capturedImageData) return;
             
             if (imageAlreadyProcessed || isCurrentImageProcessed()) {
-                showNotification('⚠️ This image was already scanned! Upload a new image.');
+                showNotification('⚠️ This image was already scanned! Upload a new image.', 'warning');
                 showStatus('Image already processed. Please upload a new image to scan again.', 'warning');
                 return;
             }
@@ -907,7 +1472,6 @@
 
         function reset() {
             capturedImageContainer.innerHTML = '';
-            resultCard.style.display = 'none';
             uploadArea.style.display = 'block';
             
             processBtn.style.display = 'none';
@@ -1048,43 +1612,41 @@
 
                 // Display results
                 if (bestResult.text) {
-                    showResult(bestResult.text, bestResult.confidence, 'text');
-                    
-                    // Verify RM validation
+                    // Verify RM validation (includes machine status check)
                     const verification = verifyRMValidation(bestResult.rmData);
                     displayVerificationInfo(verification);
                     
-                    if (verification.valid) {
-                        showStatus('✅ RM validation verified and ready!', 'success');
+                    if (verification.blocked) {
+                        // Machine is blocked - show warning and block sending
+                        showStatus(`🚫 Machine ${verification.rmNumber} is BLOCKED (status: "No")`, 'blocked');
+                        showMachineBlockedWarning(verification.rmNumber);
+                        markImageAsProcessed();
+                        
+                        // Update process button to show blocked state
+                        processBtn.classList.add('blocked');
+                        processBtn.innerHTML = '🚫 Machine Blocked';
+                        
+                    } else if (verification.valid) {
+                        showStatus(`✅ RM ${verification.rmNumber} verified and ready!`, 'success');
                         
                         markImageAsProcessed();
                         
-                        // Add RM number indicator and send button
-                        const resultHeader = document.querySelector('.result-header');
-                        const rmIndicator = document.createElement('div');
-                        rmIndicator.style.cssText = 'display: flex; align-items: center; gap: 10px; margin-top: 8px;';
-                        
-                        const badge = document.createElement('span');
-                        badge.style.cssText = 'background: #27ae60; color: white; padding: 4px 8px; border-radius: 12px; font-size: 0.75rem;';
-                        badge.textContent = `📊 RM ${verification.rmNumber}`;
-                        
+                        // Add send button to verification info
                         const sendBtn = document.createElement('button');
-                        sendBtn.style.cssText = 'background: #667eea; color: white; border: none; padding: 4px 12px; border-radius: 12px; font-size: 0.75rem; cursor: pointer;';
-                        sendBtn.textContent = '📤 Send to Sheets';
+                        sendBtn.style.cssText = 'margin-top: 10px; background: #667eea; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-size: 0.8rem; cursor: pointer; display: block; margin-left: auto; margin-right: auto;';
+                        sendBtn.textContent = `📤 Send RM ${verification.rmNumber} to Sheets`;
                         sendBtn.onclick = () => sendToGoogleSheets(verification.rmNumber, verification.fullMatch);
                         
-                        rmIndicator.appendChild(badge);
-                        rmIndicator.appendChild(sendBtn);
-                        resultHeader.appendChild(rmIndicator);
+                        verificationInfo.appendChild(sendBtn);
                         
-                        // Auto-send if enabled
+                        // Auto-send if enabled (and not blocked)
                         if (isAutoSendEnabled()) {
                             setTimeout(() => {
                                 sendToGoogleSheets(verification.rmNumber, verification.fullMatch);
                             }, 1000);
                         }
                     } else {
-                        showStatus('⚠️ OCR completed but validation failed', 'warning');
+                        showStatus('⚠️ RM validation failed - check timestamp or format', 'warning');
                     }
                 } else {
                     showStatus('❌ No text detected in image', 'error');
@@ -1099,21 +1661,28 @@
             }
         }
 
-        function showResult(text, confidence, type) {
-            resultText.textContent = text;
-            confidenceBadge.textContent = `${Math.round(confidence)}% confident`;
-            resultCard.style.display = 'block';
-            resultCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }
+
 
         function displayVerificationInfo(verification) {
             if (!verification) return;
             
             verificationInfo.innerHTML = '';
-            const infoDiv = document.createElement('div');
-            infoDiv.className = verification.valid ? 'verification-info' : 'verification-info invalid';
-            infoDiv.textContent = verification.reason;
-            verificationInfo.appendChild(infoDiv);
+            
+            if (verification.blocked) {
+                // Show machine blocked warning
+                showMachineBlockedWarning(verification.rmNumber);
+            } else {
+                // Show normal verification info
+                const infoDiv = document.createElement('div');
+                infoDiv.className = verification.valid ? 'verification-info' : 'verification-info invalid';
+                infoDiv.textContent = verification.reason;
+                verificationInfo.appendChild(infoDiv);
+            }
+            
+            // Scroll verification info into view if it contains content
+            if (verificationInfo.innerHTML.trim() !== '') {
+                verificationInfo.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
         }
 
         function showStatus(message, type = '') {
@@ -1130,15 +1699,38 @@
             progressFill.style.width = percent + '%';
         }
 
-        function showNotification(message) {
+        function showNotification(message, type = 'success') {
             notification.textContent = message;
-            notification.classList.add('show');
+            notification.className = `notification ${type} show`;
             setTimeout(() => notification.classList.remove('show'), 3000);
         }
 
         // Utility functions
         function showGoogleSheetsHelp() {
-            alert('Google Sheets Setup:\n1. Create a Google Apps Script\n2. Deploy as web app\n3. Paste the URL in settings\n4. Test connection');
+            const helpText = `Machine Status Setup:
+
+Your Apps Script URL is already configured for RM logging.
+
+For MACHINE STATUS BLOCKING feature:
+1. Open your Google Sheets
+2. Add a new tab named "Machine Status"
+3. Set up columns:
+   - Column A: Machine ID (e.g., "64-2", "51-1")  
+   - Column B: Current Status ("ok", "No", "Unknown")
+4. Make sheet publicly viewable:
+   - Share > Change to "Anyone with the link"
+   - Set to "Viewer"
+5. Replace the URL in settings with your Google Sheets URL
+
+Example Machine Status sheet:
+A1: Machine ID    B1: Current Status
+A2: 64-2         B2: ok
+A3: 51-1         B3: No
+A4: 78-3         B4: ok
+
+Machines with status "No" will be blocked from RM scanning.`;
+            
+            alert(helpText);
         }
 
         async function testGoogleSheetsConnection() {
@@ -1165,31 +1757,70 @@
                 
             } catch (error) {
                 console.error('Test failed:', error);
-                showNotification('❌ Test failed');
+                showNotification('❌ Test failed', 'error');
                 showStatus('Test failed. Check console for details.', 'error');
             }
+        }
+
+        // Initialize machine status monitoring with adaptive refresh
+        async function initializeMachineStatus() {
+            console.log('Initializing machine status monitoring with adaptive refresh...');
+            
+            // Clear any existing timer
+            if (refreshTimer) {
+                clearInterval(refreshTimer);
+            }
+            
+            // Fetch initial status
+            await fetchMachineStatus();
+            
+            // Set up adaptive refresh timer
+            function scheduleNextRefresh() {
+                if (refreshTimer) {
+                    clearTimeout(refreshTimer);
+                }
+                
+                refreshTimer = setTimeout(async () => {
+                    try {
+                        await fetchMachineStatus();
+                        scheduleNextRefresh(); // Schedule next refresh
+                    } catch (error) {
+                        console.error('Refresh failed:', error);
+                        resetRefreshRate();
+                        scheduleNextRefresh(); // Keep trying
+                    }
+                }, refreshInterval);
+            }
+            
+            // Start the refresh cycle
+            scheduleNextRefresh();
+            
+            console.log(`Machine status monitoring started with ${refreshInterval}ms refresh rate`);
         }
 
         // Initialize application
         showStatus('Upload a screenshot to start scanning for RM validation', '');
         
-        // Load saved settings
+        // Load saved settings with user's URL as default
         const defaultUrl = 'https://script.google.com/macros/s/AKfycbx4OMH7Uvgek-qecoo0ew9vhwJK0frZAfOXJMdwZsj0WLYjdqg86YhAZR_iKOudR9WUpQ/exec';
-        const savedUrl = localStorage.getItem('googleSheetsUrl') || defaultUrl;
-        document.getElementById('googleSheetsUrl').value = savedUrl;
+        document.getElementById('googleSheetsUrl').value = defaultUrl;
         
-        const savedAutoSend = localStorage.getItem('autoSendCheckbox');
-        if (savedAutoSend !== null) {
-            document.getElementById('autoSendCheckbox').checked = savedAutoSend === 'true';
-        }
+        // Save settings when changed (using variables instead of localStorage)
+        let currentGoogleSheetsUrl = defaultUrl;
+        let currentAutoSendState = true;
         
-        // Save settings when changed
         document.getElementById('googleSheetsUrl').addEventListener('input', (e) => {
-            localStorage.setItem('googleSheetsUrl', e.target.value);
+            currentGoogleSheetsUrl = e.target.value;
         });
         
         document.getElementById('autoSendCheckbox').addEventListener('change', (e) => {
-            localStorage.setItem('autoSendCheckbox', e.target.checked);
+            currentAutoSendState = e.target.checked;
+        });
+
+        // Start machine status monitoring when page loads
+        window.addEventListener('load', () => {
+            console.log('Page loaded - starting machine status monitoring');
+            initializeMachineStatus();
         });
     </script>
 </body>
