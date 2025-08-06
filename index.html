@@ -52,6 +52,124 @@
             font-size: 0.9rem;
         }
 
+        /* Manual Control Section */
+        .manual-control-section {
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(102, 126, 234, 0.2);
+        }
+
+        .manual-control-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .manual-control-title {
+            font-weight: 600;
+            color: #333;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .manual-control-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 6px;
+            max-height: 160px;
+            overflow-y: auto;
+        }
+
+        .manual-control-item {
+            background: white;
+            border-radius: 6px;
+            padding: 8px;
+            border: 1px solid #e9ecef;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+
+        .machine-toggle {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+
+        .machine-label {
+            font-weight: 600;
+            font-size: 0.8rem;
+            color: #333;
+        }
+
+        /* Toggle Switch Styling - Smaller for mobile */
+        .toggle-switch {
+            position: relative;
+            width: 40px;
+            height: 20px;
+            background: #ccc;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+            flex-shrink: 0;
+        }
+
+        .toggle-switch.active {
+            background: #27ae60;
+        }
+
+        .toggle-switch:before {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 16px;
+            height: 16px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.3s ease;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+        }
+
+        .toggle-switch.active:before {
+            transform: translateX(20px);
+        }
+
+        .toggle-status {
+            font-size: 0.65rem;
+            text-align: center;
+            padding: 1px 4px;
+            border-radius: 6px;
+            font-weight: 500;
+            min-height: 16px;
+            line-height: 14px;
+        }
+
+        .toggle-status.on {
+            background: rgba(39, 174, 96, 0.2);
+            color: #27ae60;
+        }
+
+        .toggle-status.off {
+            background: rgba(108, 117, 125, 0.2);
+            color: #6c757d;
+        }
+
+        .toggle-status.updating {
+            background: rgba(255, 193, 7, 0.2);
+            color: #ffc107;
+            animation: pulse-text 1s infinite;
+        }
+
+        @keyframes pulse-text {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
         /* Machine Status Display */
         .machine-status-section {
             background: rgba(240, 245, 255, 0.8);
@@ -527,6 +645,41 @@
                 grid-template-columns: 1fr;
             }
 
+            .manual-control-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 4px;
+                max-height: 140px;
+            }
+
+            .manual-control-item {
+                padding: 6px 8px;
+            }
+
+            .machine-label {
+                font-size: 0.75rem;
+            }
+
+            .toggle-switch {
+                width: 36px;
+                height: 18px;
+            }
+
+            .toggle-switch:before {
+                width: 14px;
+                height: 14px;
+            }
+
+            .toggle-switch.active:before {
+                transform: translateX(18px);
+            }
+
+            .toggle-status {
+                font-size: 0.6rem;
+                padding: 1px 3px;
+                min-height: 14px;
+                line-height: 12px;
+            }
+
             .footer {
                 font-size: 0.7rem;
                 padding: 6px 0;
@@ -538,7 +691,7 @@
     <div class="container">
         <div class="header">
             <h1>Machine Validation</h1>
-            <p>RM Number Detection & Logging</p>
+            <p>RM Number Detection & Manual Control</p>
         </div>
 
         <!-- Machine Status Section -->
@@ -571,6 +724,18 @@
             <input type="file" id="fileInput" class="file-input" accept="image/*">
         </div>
 
+        <!-- Manual Relay Control Section -->
+        <div class="manual-control-section">
+            <div class="manual-control-header">
+                <span class="manual-control-title">
+                    Manual Control
+                </span>
+            </div>
+            <div id="manualControlDisplay" class="status-loading">
+                Loading manual controls...
+            </div>
+        </div>
+
         <div class="controls" id="controls">
             <button class="btn btn-primary" id="processBtn" style="display: none;">
                 🔍 Scan RM Number
@@ -600,6 +765,7 @@
     <script>
         // Global machine status storage
         let machineStatusData = {};
+        let manualToggleData = {};
         let lastStatusUpdate = null;
         let refreshInterval = 3000; // Start with 3 seconds
         let consecutiveSuccesses = 0;
@@ -612,6 +778,113 @@
         
         function isAutoSendEnabled() {
             return true; // Always auto-send
+        }
+
+        // ===== MANUAL TOGGLE FUNCTIONS =====
+
+        // Send manual toggle state to server
+        async function sendManualToggle(machineId, toggleState) {
+            try {
+                const serverUrl = getServerUrl();
+                
+                const data = {
+                    type: 'manual_toggle',
+                    machineId: machineId,
+                    toggleState: toggleState,
+                    timestamp: new Date().toISOString()
+                };
+                
+                console.log('Sending manual toggle:', data);
+                
+                const response = await fetch(serverUrl, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                // Update local state immediately for better UX
+                manualToggleData[machineId] = {
+                    state: toggleState,
+                    lastUpdate: new Date(),
+                    updating: false
+                };
+                
+                displayManualControls();
+                
+                showNotification(`🎮 Manual toggle for ${machineId} set to ${toggleState ? 'ON' : 'OFF'}`);
+                return true;
+                
+            } catch (error) {
+                console.error('Failed to send manual toggle:', error);
+                showNotification('❌ Failed to send manual toggle', 'error');
+                return false;
+            }
+        }
+
+        // Handle toggle click
+        function handleToggleClick(machineId) {
+            const currentState = manualToggleData[machineId]?.state || false;
+            const newState = !currentState;
+            
+            // Set updating state
+            if (!manualToggleData[machineId]) {
+                manualToggleData[machineId] = {};
+            }
+            manualToggleData[machineId].updating = true;
+            displayManualControls();
+            
+            sendManualToggle(machineId, newState);
+        }
+
+        // Display manual control toggles
+        function displayManualControls() {
+            const display = document.getElementById('manualControlDisplay');
+            
+            const machineIds = Object.keys(machineStatusData);
+            
+            if (machineIds.length === 0) {
+                display.innerHTML = `
+                    <div style="color: #666; text-align: center; padding: 15px;">
+                        📊 No machines available for manual control<br>
+                        <small style="color: #999;">Machine status must be loaded first</small>
+                    </div>
+                `;
+                return;
+            }
+            
+            const controlsHtml = machineIds
+                .sort((a, b) => a.localeCompare(b))
+                .map(machineId => {
+                    const toggleData = manualToggleData[machineId] || { state: false, updating: false };
+                    const isOn = toggleData.state;
+                    const isUpdating = toggleData.updating;
+                    
+                    const toggleClass = isOn ? 'toggle-switch active' : 'toggle-switch';
+                    const statusClass = isUpdating ? 'toggle-status updating' : (isOn ? 'toggle-status on' : 'toggle-status off');
+                    const statusText = isUpdating ? 'Updating...' : (isOn ? 'ON' : 'OFF');
+                    
+                    return `
+                        <div class="manual-control-item">
+                            <div class="machine-toggle">
+                                <span class="machine-label">${machineId}</span>
+                                <div class="${toggleClass}" onclick="handleToggleClick('${machineId}')" ${isUpdating ? 'style="opacity: 0.6; cursor: wait;"' : ''}></div>
+                            </div>
+                            <div class="${statusClass}">
+                                ${statusText}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            
+            display.innerHTML = `
+                <div class="manual-control-grid">
+                    ${controlsHtml}
+                </div>
+                <div style="text-align: center; margin-top: 8px; font-size: 0.65rem; color: #666;">
+                    Toggle switches to manually control relay states
+                </div>
+            `;
         }
 
         // Fetch machine status from server
@@ -656,6 +929,12 @@
                 
                 if (data.status === 'success' && data.machines) {
                     processMachineStatusData(data);
+                    
+                    // Also process manual toggle data if present
+                    if (data.manualToggles) {
+                        processManualToggleData(data.manualToggles);
+                    }
+                    
                     consecutiveSuccesses++;
                     adjustRefreshRate();
                     return;
@@ -667,6 +946,20 @@
                 console.log('Apps Script status failed:', error.message);
                 await tryDirectSheetsAccess(baseUrl);
             }
+        }
+
+        // Process manual toggle data from server
+        function processManualToggleData(togglesArray) {
+            if (Array.isArray(togglesArray)) {
+                togglesArray.forEach(toggle => {
+                    manualToggleData[toggle.machineId] = {
+                        state: toggle.toggleState,
+                        lastUpdate: new Date(toggle.lastUpdate),
+                        updating: false
+                    };
+                });
+            }
+            displayManualControls();
         }
 
         // Try to read directly from Google Sheets
@@ -798,6 +1091,7 @@
             console.log('Processed machine status data:', machineStatusData);
             lastStatusUpdate = new Date();
             displayMachineStatus();
+            displayManualControls(); // Update manual controls when machine data changes
         }
 
         // Process machine status data from Apps Script
@@ -819,6 +1113,7 @@
             console.log('Processed machine status data:', machineStatusData);
             lastStatusUpdate = new Date();
             displayMachineStatus();
+            displayManualControls(); // Update manual controls when machine data changes
         }
 
         // Display machine status in the UI (smooth updates)
