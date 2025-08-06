@@ -88,7 +88,7 @@
         .manual-control-item {
             background: white;
             border-radius: 6px;
-            padding: 8px;
+            padding: 10px;
             border: 1px solid #e9ecef;
             box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
         }
@@ -97,7 +97,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 4px;
+            margin-bottom: 6px;
         }
 
         .machine-label {
@@ -106,20 +106,22 @@
             color: #333;
         }
 
-        /* Toggle Switch Styling - Smaller for mobile */
+        /* Toggle Switch Styling - Larger and more visible */
         .toggle-switch {
             position: relative;
-            width: 40px;
-            height: 20px;
-            background: #ccc;
-            border-radius: 12px;
+            width: 54px;
+            height: 28px;
+            background: #ddd;
+            border-radius: 16px;
             cursor: pointer;
-            transition: background 0.3s ease;
+            transition: all 0.3s ease;
             flex-shrink: 0;
+            border: 2px solid #eee;
         }
 
         .toggle-switch.active {
             background: #27ae60;
+            border-color: #27ae60;
         }
 
         .toggle-switch:before {
@@ -127,16 +129,17 @@
             position: absolute;
             top: 2px;
             left: 2px;
-            width: 16px;
-            height: 16px;
+            width: 22px;
+            height: 22px;
             background: white;
             border-radius: 50%;
             transition: transform 0.3s ease;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
         }
 
         .toggle-switch.active:before {
-            transform: translateX(20px);
+            transform: translateX(26px);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
         }
 
         .toggle-status {
@@ -652,7 +655,7 @@
             }
 
             .manual-control-item {
-                padding: 6px 8px;
+                padding: 8px;
             }
 
             .machine-label {
@@ -660,17 +663,19 @@
             }
 
             .toggle-switch {
-                width: 36px;
-                height: 18px;
+                width: 48px;
+                height: 26px;
             }
 
             .toggle-switch:before {
-                width: 14px;
-                height: 14px;
+                width: 20px;
+                height: 20px;
+                top: 2px;
+                left: 2px;
             }
 
             .toggle-switch.active:before {
-                transform: translateX(18px);
+                transform: translateX(22px);
             }
 
             .toggle-status {
@@ -773,7 +778,7 @@
 
         // Server integration
         function getServerUrl() {
-            return 'https://script.google.com/macros/s/AKfycbyUz2N3TizOj9vTC75JbdVehlpGbJBj-09erI2HfAzOy4AxXBzkCKYEXaYhan7KVziDpA/exec';
+            return 'https://script.google.com/macros/s/AKfycbwH14-ZrEhPQAb6SvEWGmpqvK6ZE3_pD8TUSOFGim990a8fGiTyUgZMnFavKYPACkvJkw/exec';
         }
         
         function isAutoSendEnabled() {
@@ -882,7 +887,7 @@
                     ${controlsHtml}
                 </div>
                 <div style="text-align: center; margin-top: 8px; font-size: 0.65rem; color: #666;">
-                    Toggle switches to manually control relay states
+                    Toggle switches to manually control system
                 </div>
             `;
         }
