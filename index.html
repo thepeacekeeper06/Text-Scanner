@@ -32,143 +32,6 @@
             border: 1px solid rgba(255, 255, 255, 0.2);
         }
 
-        /* Authentication Section */
-        .auth-section {
-            background: rgba(102, 126, 234, 0.1);
-            border-radius: 12px;
-            padding: 15px;
-            margin-bottom: 20px;
-            border: 1px solid rgba(102, 126, 234, 0.2);
-        }
-
-        .login-form {
-            display: block;
-        }
-
-        .login-form.hidden {
-            display: none;
-        }
-
-        .user-info {
-            display: none;
-        }
-
-        .user-info.show {
-            display: block;
-        }
-
-        .auth-title {
-            font-weight: 600;
-            color: #333;
-            font-size: 0.9rem;
-            margin-bottom: 15px;
-            text-align: center;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 5px;
-        }
-
-        .login-input-group {
-            margin-bottom: 15px;
-        }
-
-        .login-label {
-            display: block;
-            font-size: 0.8rem;
-            font-weight: 600;
-            color: #333;
-            margin-bottom: 5px;
-        }
-
-        .login-input {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            font-size: 0.9rem;
-            transition: border-color 0.2s ease;
-        }
-
-        .login-input:focus {
-            outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
-        }
-
-        .login-btn {
-            width: 100%;
-            padding: 12px;
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 0.9rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.2s ease;
-        }
-
-        .login-btn:hover:not(:disabled) {
-            transform: translateY(-1px);
-        }
-
-        .login-btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none !important;
-        }
-
-        .user-welcome {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-
-        .user-details {
-            font-size: 0.8rem;
-            color: #666;
-            line-height: 1.4;
-        }
-
-        .logout-btn {
-            background: #e74c3c;
-            color: white;
-            border: none;
-            padding: 4px 8px;
-            border-radius: 6px;
-            font-size: 0.75rem;
-            cursor: pointer;
-            transition: background 0.2s ease;
-        }
-
-        .logout-btn:hover {
-            background: #c0392b;
-        }
-
-        .user-name {
-            font-weight: 600;
-            color: #27ae60;
-            font-size: 1rem;
-        }
-
-        .user-role {
-            color: #667eea;
-            font-weight: 500;
-        }
-
-        .main-content {
-            opacity: 0.3;
-            pointer-events: none;
-            transition: all 0.3s ease;
-        }
-
-        .main-content.authenticated {
-            opacity: 1;
-            pointer-events: all;
-        }
-
         .header {
             text-align: center;
             margin-bottom: 25px;
@@ -826,126 +689,74 @@
                 font-size: 0.7rem;
                 padding: 6px 0;
             }
-
-            .login-input {
-                font-size: 16px; /* Prevents zoom on iOS */
-            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- Authentication Section -->
-        <div class="auth-section">
-            <!-- Login Form -->
-            <div class="login-form" id="loginForm">
-                <div class="auth-title">
-                    🔐 User Authentication Required
-                </div>
-                <form id="loginFormElement">
-                    <div class="login-input-group">
-                        <label class="login-label" for="phoneInput">Phone Number</label>
-                        <input type="tel" id="phoneInput" class="login-input" placeholder="Enter your phone number" required>
-                    </div>
-                    <div class="login-input-group">
-                        <label class="login-label" for="passwordInput">Password</label>
-                        <input type="password" id="passwordInput" class="login-input" placeholder="Enter your password" required>
-                    </div>
-                    <button type="submit" class="login-btn" id="loginBtn">
-                        🚀 Login
-                    </button>
-                </form>
-                <div style="text-align: center; margin-top: 10px; font-size: 0.75rem; color: #666;">
-                    Contact supervisor if you don't have login credentials
-                </div>
-            </div>
+        <div class="header">
+            <h1>Machine Validation</h1>
+            <p>RM Number Detection & Manual Control</p>
+        </div>
 
-            <!-- User Info (shown when logged in) -->
-            <div class="user-info" id="userInfo">
-                <div class="user-welcome">
-                    <div>
-                        <div class="user-name" id="userName">Welcome!</div>
-                        <div class="user-details">
-                            <span class="user-role" id="userRole">Role</span> • 
-                            <span id="userPhone">Phone</span>
-                        </div>
-                    </div>
-                    <button class="logout-btn" id="logoutBtn">
-                        🚪 Logout
-                    </button>
-                </div>
-                <div style="font-size: 0.7rem; color: #666; text-align: center; margin-top: 5px;">
-                    All actions are logged for accountability
-                </div>
+        <!-- Machine Status Section -->
+        <div class="machine-status-section">
+            <div class="machine-status-header">
+                <span class="machine-status-title">
+                    🏭 Machine Status
+                    <span class="connection-indicator" id="connectionIndicator"></span>
+                </span>
+                <button class="refresh-btn" id="refreshStatusBtn" onclick="forceRefreshStatus()">
+                    🔄 Refresh
+                </button>
+            </div>
+            <div id="machineStatusDisplay" class="status-loading">
+                Connecting to machine status...
             </div>
         </div>
 
-        <!-- Main Content (disabled until authenticated) -->
-        <div class="main-content" id="mainContent">
-            <div class="header">
-                <h1>Machine Validation</h1>
-                <p>RM Number Detection & Manual Control</p>
-            </div>
-
-            <!-- Machine Status Section -->
-            <div class="machine-status-section">
-                <div class="machine-status-header">
-                    <span class="machine-status-title">
-                        🏭 Machine Status
-                        <span class="connection-indicator" id="connectionIndicator"></span>
-                    </span>
-                    <button class="refresh-btn" id="refreshStatusBtn" onclick="forceRefreshStatus()">
-                        🔄 Refresh
-                    </button>
-                </div>
-                <div id="machineStatusDisplay" class="status-loading">
-                    Connecting to machine status...
+        <div class="upload-section">
+            <div id="capturedImageContainer"></div>
+            
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-icon">📁</div>
+                <div class="upload-text">
+                    🇮🇳 Upload Screenshot<br>
+                    <small>Upload image with RM validation text</small>
                 </div>
             </div>
-
-            <div class="upload-section">
-                <div id="capturedImageContainer"></div>
-                
-                <div class="upload-area" id="uploadArea">
-                    <div class="upload-icon">📁</div>
-                    <div class="upload-text">
-                        🇮🇳 Upload Screenshot<br>
-                        <small>Upload image with RM validation text</small>
-                    </div>
-                </div>
-                
-                <input type="file" id="fileInput" class="file-input" accept="image/*">
-            </div>
-
-            <!-- Manual Relay Control Section -->
-            <div class="manual-control-section">
-                <div class="manual-control-header">
-                    <span class="manual-control-title">
-                        Manual Control
-                    </span>
-                </div>
-                <div id="manualControlDisplay" class="status-loading">
-                    Loading manual controls...
-                </div>
-            </div>
-
-            <div class="controls" id="controls">
-                <button class="btn btn-primary" id="processBtn" style="display: none;">
-                    🔍 Scan RM Number
-                </button>
-                <button class="btn btn-secondary" id="retakeBtn" style="display: none;">
-                    🔄 Upload New
-                </button>
-            </div>
-
-            <div class="progress-bar" id="progressBar">
-                <div class="progress-fill" id="progressFill"></div>
-            </div>
-
-            <div class="status" id="status">Login required to start scanning for RM validation</div>
-
-            <div id="verificationInfo"></div>
+            
+            <input type="file" id="fileInput" class="file-input" accept="image/*">
         </div>
+
+        <!-- Manual Relay Control Section -->
+        <div class="manual-control-section">
+            <div class="manual-control-header">
+                <span class="manual-control-title">
+                    Manual Control
+                </span>
+            </div>
+            <div id="manualControlDisplay" class="status-loading">
+                Loading manual controls...
+            </div>
+        </div>
+
+        <div class="controls" id="controls">
+            <button class="btn btn-primary" id="processBtn" style="display: none;">
+                🔍 Scan RM Number
+            </button>
+            <button class="btn btn-secondary" id="retakeBtn" style="display: none;">
+                🔄 Upload New
+            </button>
+        </div>
+
+        <div class="progress-bar" id="progressBar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+
+        <div class="status" id="status">Upload a screenshot to start scanning for RM validation</div>
+
+        <div id="verificationInfo"></div>
     </div>
 
     <div class="notification" id="notification">✅ Processing complete!</div>
@@ -957,10 +768,6 @@
     </div>
 
     <script>
-        // Authentication state
-        let currentUser = null;
-        let authToken = null;
-
         // Global machine status storage
         let machineStatusData = {};
         let manualToggleData = {};
@@ -971,187 +778,11 @@
 
         // Server integration
         function getServerUrl() {
-            return 'https://script.google.com/macros/s/AKfycbyryyMynz1XqYreGuA_MgTL197NmR2rRIVVqOmZFivGSELw7XSeW1_viQObVlmOKS6zCg/exec';
+            return 'https://script.google.com/macros/s/AKfycbwH14-ZrEhPQAb6SvEWGmpqvK6ZE3_pD8TUSOFGim990a8fGiTyUgZMnFavKYPACkvJkw/exec';
         }
         
         function isAutoSendEnabled() {
             return true; // Always auto-send
-        }
-
-        // ===== AUTHENTICATION FUNCTIONS =====
-
-        // Check if user is logged in on page load
-        function checkExistingAuth() {
-            const savedAuth = localStorage.getItem('userAuth');
-            if (savedAuth) {
-                try {
-                    const authData = JSON.parse(savedAuth);
-                    // Check if auth is not too old (24 hours)
-                    const authAge = new Date().getTime() - new Date(authData.loginTime).getTime();
-                    const maxAge = 24 * 60 * 60 * 1000; // 24 hours
-                    
-                    if (authAge <= maxAge) {
-                        currentUser = authData;
-                        authToken = authData.loginToken;
-                        showUserInfo();
-                        enableMainContent();
-                        return true;
-                    } else {
-                        // Auth expired
-                        localStorage.removeItem('userAuth');
-                    }
-                } catch (error) {
-                    console.error('Error checking existing auth:', error);
-                    localStorage.removeItem('userAuth');
-                }
-            }
-            return false;
-        }
-
-        // Handle login form submission
-        document.getElementById('loginFormElement').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            await performLogin();
-        });
-
-        // Handle logout
-        document.getElementById('logoutBtn').addEventListener('click', () => {
-            performLogout();
-        });
-
-        // Perform login
-        async function performLogin() {
-            const phoneInput = document.getElementById('phoneInput');
-            const passwordInput = document.getElementById('passwordInput');
-            const loginBtn = document.getElementById('loginBtn');
-            
-            const phone = phoneInput.value.trim();
-            const password = passwordInput.value.trim();
-            
-            if (!phone || !password) {
-                showNotification('⚠️ Please enter both phone number and password', 'warning');
-                return;
-            }
-            
-            loginBtn.disabled = true;
-            loginBtn.textContent = '🔄 Logging in...';
-            
-            try {
-                const response = await fetch(getServerUrl(), {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        type: 'login',
-                        phone: phone,
-                        password: password
-                    })
-                });
-                
-                // Since we're using no-cors, we can't read the response
-                // But we can try to verify the login by making another call
-                
-                // Wait a moment for the server to process
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                
-                // For no-cors requests, we'll simulate success and let the user try
-                // In a real implementation, you'd handle this properly with CORS enabled
-                
-                currentUser = {
-                    name: 'User', // We'll get real data from verification
-                    phone: phone,
-                    role: 'Authorized User',
-                    loginToken: generateClientLoginToken(phone),
-                    loginTime: new Date().toISOString()
-                };
-                
-                authToken = currentUser.loginToken;
-                
-                // Save to localStorage for persistence
-                localStorage.setItem('userAuth', JSON.stringify(currentUser));
-                
-                showUserInfo();
-                enableMainContent();
-                showNotification('✅ Login successful!');
-                
-                // Clear form
-                phoneInput.value = '';
-                passwordInput.value = '';
-                
-            } catch (error) {
-                console.error('Login error:', error);
-                showNotification('❌ Login failed. Please check credentials.', 'error');
-            } finally {
-                loginBtn.disabled = false;
-                loginBtn.textContent = '🚀 Login';
-            }
-        }
-
-        // Generate client-side login token (simple implementation)
-        function generateClientLoginToken(phone) {
-            const tokenData = {
-                phone: phone,
-                timestamp: new Date().getTime(),
-                random: Math.random().toString(36).substring(2)
-            };
-            return btoa(JSON.stringify(tokenData));
-        }
-
-        // Perform logout
-        function performLogout() {
-            currentUser = null;
-            authToken = null;
-            localStorage.removeItem('userAuth');
-            
-            showLoginForm();
-            disableMainContent();
-            showNotification('👋 Logged out successfully');
-            
-            // Reset application state
-            reset();
-        }
-
-        // Show user info section
-        function showUserInfo() {
-            if (!currentUser) return;
-            
-            document.getElementById('loginForm').classList.add('hidden');
-            document.getElementById('userInfo').classList.add('show');
-            
-            document.getElementById('userName').textContent = `Welcome, ${currentUser.name}!`;
-            document.getElementById('userRole').textContent = currentUser.role;
-            document.getElementById('userPhone').textContent = currentUser.phone;
-        }
-
-        // Show login form
-        function showLoginForm() {
-            document.getElementById('loginForm').classList.remove('hidden');
-            document.getElementById('userInfo').classList.remove('show');
-        }
-
-        // Enable main content
-        function enableMainContent() {
-            document.getElementById('mainContent').classList.add('authenticated');
-            document.getElementById('status').textContent = 'Upload a screenshot to start scanning for RM validation';
-        }
-
-        // Disable main content
-        function disableMainContent() {
-            document.getElementById('mainContent').classList.remove('authenticated');
-            document.getElementById('status').textContent = 'Login required to start scanning for RM validation';
-        }
-
-        // Get user auth object for API calls
-        function getUserAuth() {
-            if (!currentUser || !authToken) {
-                return null;
-            }
-            
-            return {
-                phone: currentUser.phone,
-                loginToken: authToken,
-                name: currentUser.name
-            };
         }
 
         // ===== MANUAL TOGGLE FUNCTIONS =====
@@ -1159,20 +790,13 @@
         // Send manual toggle state to server
         async function sendManualToggle(machineId, toggleState) {
             try {
-                const userAuth = getUserAuth();
-                if (!userAuth) {
-                    showNotification('❌ Authentication required', 'error');
-                    return false;
-                }
-                
                 const serverUrl = getServerUrl();
                 
                 const data = {
                     type: 'manual_toggle',
                     machineId: machineId,
                     toggleState: toggleState,
-                    timestamp: new Date().toISOString(),
-                    userAuth: userAuth
+                    timestamp: new Date().toISOString()
                 };
                 
                 console.log('Sending manual toggle:', data);
@@ -1193,7 +817,7 @@
                 
                 displayManualControls();
                 
-                showNotification(`🎮 Manual toggle for ${machineId} set to ${toggleState ? 'ON' : 'OFF'} by ${currentUser.name}`);
+                showNotification(`🎮 Manual toggle for ${machineId} set to ${toggleState ? 'ON' : 'OFF'}`);
                 return true;
                 
             } catch (error) {
@@ -1205,11 +829,6 @@
 
         // Handle toggle click
         function handleToggleClick(machineId) {
-            if (!currentUser) {
-                showNotification('❌ Please login first', 'error');
-                return;
-            }
-            
             const currentState = manualToggleData[machineId]?.state || false;
             const newState = !currentState;
             
@@ -1226,16 +845,6 @@
         // Display manual control toggles
         function displayManualControls() {
             const display = document.getElementById('manualControlDisplay');
-            
-            if (!currentUser) {
-                display.innerHTML = `
-                    <div style="color: #666; text-align: center; padding: 15px;">
-                        🔐 Login required for manual control<br>
-                        <small style="color: #999;">Please authenticate to access controls</small>
-                    </div>
-                `;
-                return;
-            }
             
             const machineIds = Object.keys(machineStatusData);
             
@@ -1278,7 +887,7 @@
                     ${controlsHtml}
                 </div>
                 <div style="text-align: center; margin-top: 8px; font-size: 0.65rem; color: #666;">
-                    Toggle switches to manually control system • User: <strong>${currentUser.name}</strong>
+                    Toggle switches to manually control system
                 </div>
             `;
         }
@@ -1898,16 +1507,9 @@
             return result;
         }
         
-        // Send data to server with authentication
+        // Send data to server (now checks machine status)
         async function sendToServer(rmNumber, fullText) {
             try {
-                const userAuth = getUserAuth();
-                if (!userAuth) {
-                    showNotification('❌ Authentication required', 'error');
-                    showStatus('Please login to send RM data to server.', 'error');
-                    return false;
-                }
-                
                 // Double-check machine status before sending
                 if (isMachineBlocked(rmNumber)) {
                     showNotification(`🚫 Machine ${rmNumber} is BLOCKED - Cannot send to server`, 'error');
@@ -1921,8 +1523,7 @@
                 const data = {
                     rmNumber: String(rmNumber).trim(),
                     fullText: String(fullText).trim(),
-                    timestamp: new Date().toISOString(),
-                    userAuth: userAuth
+                    timestamp: new Date().toISOString()
                 };
                 
                 console.log('Sending to server:', data);
@@ -1934,8 +1535,8 @@
                     body: JSON.stringify(data)
                 });
                 
-                showNotification(`📊 RM ${rmNumber} sent to server by ${currentUser.name}!`);
-                showStatus(`Success! RM ${rmNumber} logged to server by ${currentUser.name}.`, 'success');
+                showNotification(`📊 RM ${rmNumber} sent to server!`);
+                showStatus(`Success! RM ${rmNumber} logged to server.`, 'success');
                 return true;
                 
             } catch (error) {
@@ -1996,32 +1597,17 @@
         }
 
         // File upload handling
-        uploadArea.addEventListener('click', () => {
-            if (!currentUser) {
-                showNotification('❌ Please login first', 'error');
-                return;
-            }
-            fileInput.click();
-        });
-        
+        uploadArea.addEventListener('click', () => fileInput.click());
         uploadArea.addEventListener('dragover', (e) => {
             e.preventDefault();
-            if (currentUser) {
-                uploadArea.classList.add('dragover');
-            }
+            uploadArea.classList.add('dragover');
         });
-        
         uploadArea.addEventListener('dragleave', () => {
             uploadArea.classList.remove('dragover');
         });
-        
         uploadArea.addEventListener('drop', (e) => {
             e.preventDefault();
             uploadArea.classList.remove('dragover');
-            if (!currentUser) {
-                showNotification('❌ Please login first', 'error');
-                return;
-            }
             const files = e.dataTransfer.files;
             if (files.length > 0) {
                 handleFileUpload(files[0]);
@@ -2029,21 +1615,12 @@
         });
 
         fileInput.addEventListener('change', (e) => {
-            if (!currentUser) {
-                showNotification('❌ Please login first', 'error');
-                return;
-            }
             if (e.target.files.length > 0) {
                 handleFileUpload(e.target.files[0]);
             }
         });
 
         async function handleFileUpload(file) {
-            if (!currentUser) {
-                showNotification('❌ Please login first', 'error');
-                return;
-            }
-            
             if (!file.type.startsWith('image/')) {
                 showStatus('❌ Please select an image file (JPG, PNG, etc.)', 'error');
                 return;
@@ -2057,7 +1634,7 @@
                 capturedImageData = e.target.result;
                 displayCapturedImage(capturedImageData);
                 showProcessControls();
-                showStatus(`✅ Image ready for scanning by ${currentUser.name}`, 'success');
+                showStatus('✅ Image ready for scanning', 'success');
             };
             
             reader.onerror = () => {
@@ -2068,11 +1645,6 @@
         }
 
         processBtn.addEventListener('click', async () => {
-            if (!currentUser) {
-                showNotification('❌ Please login first', 'error');
-                return;
-            }
-            
             if (!capturedImageData) return;
             
             if (imageAlreadyProcessed || isCurrentImageProcessed()) {
@@ -2099,8 +1671,6 @@
         }
 
         function showProcessControls() {
-            if (!currentUser) return;
-            
             processBtn.style.display = 'block';
             retakeBtn.style.display = 'block';
             
@@ -2120,12 +1690,7 @@
             
             capturedImageData = null;
             resetProcessingState();
-            
-            if (currentUser) {
-                showStatus('Upload a screenshot to start scanning for RM validation', '');
-            } else {
-                showStatus('Login required to start scanning for RM validation', '');
-            }
+            showStatus('Upload a screenshot to start scanning for RM validation', '');
         }
 
         // Image preprocessing for better OCR
@@ -2182,10 +1747,6 @@
         // Advanced OCR functionality
         async function performOCR() {
             if (!capturedImageData) return;
-            if (!currentUser) {
-                showNotification('❌ Please login first', 'error');
-                return;
-            }
             
             try {
                 processBtn.disabled = true;
@@ -2277,7 +1838,7 @@
                         processBtn.innerHTML = '🚫 Machine Blocked';
                         
                     } else if (verification.valid) {
-                        showStatus(`✅ RM ${verification.rmNumber} verified and ready! (User: ${currentUser.name})`, 'success');
+                        showStatus(`✅ RM ${verification.rmNumber} verified and ready!`, 'success');
                         
                         markImageAsProcessed();
                         
@@ -2382,19 +1943,11 @@
         }
 
         // Initialize application
+        showStatus('Upload a screenshot to start scanning for RM validation', '');
+
+        // Start machine status monitoring when page loads
         window.addEventListener('load', () => {
-            console.log('Page loaded - checking authentication and starting machine status monitoring');
-            
-            // Check if user is already logged in
-            const hasAuth = checkExistingAuth();
-            
-            if (!hasAuth) {
-                // Show login form
-                showLoginForm();
-                disableMainContent();
-            }
-            
-            // Start machine status monitoring regardless of auth status
+            console.log('Page loaded - starting machine status monitoring');
             initializeMachineStatus();
         });
     </script>
